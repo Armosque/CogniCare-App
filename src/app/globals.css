@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+:root {
+  /* Colorful & Playful Palette base on OKLCH */
+  --background: oklch(0.95 0.05 240); /* Soft Sky Blue */
+  --foreground: oklch(0.2 0.02 240);
+  
+  --color-purple: oklch(0.7 0.15 300);   /* Friendly Purple */
+  --color-green: oklch(0.75 0.2 160);    /* Friendly Green */
+  --color-orange: oklch(0.8 0.18 60);    /* Friendly Orange */
+  --color-blue: oklch(0.75 0.15 240);   /* Primary Blue */
+
+  --primary: var(--color-blue);
+  --secondary: var(--color-orange);
+  --accent: var(--color-green);
+  
+  --card: oklch(1 0 0);
+  --border: oklch(0.9 0.01 240);
+  --radius: 2rem;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', 'Outfit', sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Sky Background with Clouds */
+.sky-bg {
+  background: linear-gradient(to bottom, #A5D8FF 0%, #E3F2FD 100%);
+  position: fixed;
+  inset: 0;
+  z-index: -20;
+}
+
+.cloud {
+  position: absolute;
+  background: white;
+  border-radius: 100px;
+  opacity: 0.6;
+  filter: blur(20px);
+  z-index: -10;
+}
+
+@keyframes float {
+  0% { transform: translateX(-10%) translateY(0); }
+  50% { transform: translateX(10%) translateY(20px); }
+  100% { transform: translateX(-10%) translateY(0); }
+}
+
+.animate-float {
+  animation: float 20s ease-in-out infinite;
+}
+
+.calm-shadow {
+  box-shadow: 0 20px 50px -15px oklch(0.7 0.05 240 / 0.15);
+}
+
+.interactive-element {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.interactive-element:hover {
+  transform: translateY(-5px) scale(1.02);
+}
+
+.interactive-element:active {
+  transform: scale(0.95);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.7 0.1 240 / 0.3);
+  border-radius: 10px;
+}
+
+/* Prose Accessibility Styles */
+.prose {
+  font-size: 1.125rem;
+  line-height: 1.8;
+}
+
+.prose h3 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-blue);
+}
+
+.prose ul, .prose ol {
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.prose li {
+  margin-bottom: 0.5rem;
+  list-style-type: none; /* Hide default bullets to avoid AI marker glitches */
+}
+
+.prose > *:first-child {
+  margin-top: 0 !important;
+}
+
+.prose strong {
+  color: var(--color-blue);
+  font-weight: 700;
+}
+
+.prose p {
+  margin-bottom: 1rem;
+}
+
+.prose-invert h3, .prose-invert h1, .prose-invert strong {
+  color: white;
+}
