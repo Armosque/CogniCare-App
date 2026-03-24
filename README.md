@@ -1,16 +1,14 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Configuración Local (Entorno Compartido)
+## Configuración Local 
 
-Para que tu compañero pueda empezar a trabajar de inmediato, el proyecto ya viene pre-configurado con las llaves de Azure:
+
 
 1.  **Instalar dependencias**:
     ```bash
     npm install
     ```
 2.  **Preparar Environment**:
-    - **Si le pasas la carpeta completa** con el archivo `.env.local`, ya puede saltar al paso 3.
-    - **Si no tiene el .env.local**, debe renombrar el archivo `.env.example` a `.env.local`.
+    - .env.local
 
 3.  **Iniciar Servidor de Desarrollo**:
     ```bash
