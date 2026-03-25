@@ -806,19 +806,6 @@ cia
 - Interfaces: **PascalCase** (AgentMessage)
 - Constantes: **SCREAMING_SNAKE_CASE** (DATABASE_ID)
 
----
-
-## 🎯 Próximas Mejoras Potenciales
-
-- [ ] Sincronización en tiempo real con WebSockets
-- [ ] Exportar historial a PDF
-- [ ] Compartir sesiones con facilitadores
-- [ ] Integración con calendario
-- [ ] Recordatorios personalizados
-- [ ] Analytics dashboard
-- [ ] Múltiples modelos de IA
-- [ ] Offline mode con sync
-- [ ] Gamification (badges, streaks)
 
 ---
 
@@ -834,4 +821,3 @@ cia
 
 **Última actualización:** Marzo 25, 2025  
 **Versión de la App:** 0.1.0  
-**Última revisión:** Copilot Assistant

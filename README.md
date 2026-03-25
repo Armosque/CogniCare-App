@@ -1,39 +1,45 @@
 
-## Configuración Local 
+## 🚀 Quick Start - Local Development
+
+### Requisitos
+
+- **Docker** y **Docker Compose** instalados
+  ```bash
+  docker --version        # v25+
+  docker compose version  # v2.x
+  ```
+- **Puertos disponibles**: 3000 (frontend), 8000 (backend)
+- **`.env`** en la raíz con las variables requeridas:
+
+### Ejecutar
+
+```bash
+cd /home/afelopez/Projects/CogniCare-App
+docker compose up --build
+```
+
+Espera ~30 segundos. Deberías ver:
+```
+backend   | INFO: Uvicorn running on http://0.0.0.0:8000
+frontend  | ready - started server on 0.0.0.0:3000
+```
+
+### Verificar que funciona
+
+```bash
+# En otra terminal
+curl http://localhost:3000          # Frontend OK
+curl http://localhost:8000/health   # Backend: {"status":"healthy"}
+```
+
+### Debuguear si falla
+
+| Problema | Solución |
+|----------|----------|
+| **"Port already in use"** | `lsof -i :8000 && lsof -i :3000` → `kill -9 <PID>` |
+| **Backend error: ConfigError** | Verificar `.env.local` tiene AZURE_COSMOS_ENDPOINT, AZURE_COSMOS_KEY |
+| **Backend connection timeout** | Verificar que tu Cosmos DB en Azure está accesible y la key es correcta |
+| **Container exitea inmediatamente** | `docker compose logs backend` o `docker compose logs frontend` para ver el error |
+| **Limpiar todo y empezar** | `docker compose down` luego `docker compose up --build` |
 
 
-
-1.  **Instalar dependencias**:
-    ```bash
-    npm install
-    ```
-2.  **Preparar Environment**:
-    - .env.local
-
-3.  **Iniciar Servidor de Desarrollo**:
-    ```bash
-    npm run dev
-    ```
-
-Accede a [http://localhost:3000](http://localhost:3000) para ver el resultado.
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
