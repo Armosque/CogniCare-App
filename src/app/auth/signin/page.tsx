@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Key, ArrowLeft, Heart, Sparkles, AlertCircle } from 'lucide-react';
+import { Brain, Key, Sparkles, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { isAzureConfigured } from '@/lib/actions';
 

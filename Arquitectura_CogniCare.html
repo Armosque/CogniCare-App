@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Arquitectura_CogniCare.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="cognicare-arquitectura-de-software-y-referencia-t%C3%A9cnica">CogniCare: Arquitectura de Software y Referencia Técnica</h1>
+<p><strong>Documento de Arquitectura</strong></p>
+<p><strong>Público Destino:</strong></p>
+<p>Desarrolladores de Software, Arquitectos Cloud, Ingenieros de Datos e Inteligencia Artificial.</p>
+<hr>
+<h2 id="1-introducci%C3%B3n-y-prop%C3%B3sito">1. Introducción y Propósito</h2>
+<p>CogniCare es una aplicación web asistencial de vanguardia, impulsada por inteligencia artificial local y cloud-native, diseñada bajo rigurosos estándares de accesibilidad para reducir y simplificar la carga cognitiva de usuarios neurodivergentes (TDAH, Trastorno del Espectro Autista, Dislexia).</p>
+<p>El sistema utiliza modelos de lenguaje pequeños pero altamente capaces (SLMs como <strong>Phi-4-multimodal-instruct</strong> alojados en <strong>Azure AI Foundry</strong>) para ingerir contextos pesados y fragmentarlos en micro-tareas accionables sin abrumar al usuario.</p>
+<h3 id="11-misi%C3%B3n">1.1. Misión</h3>
+<p>Empoderar a personas neurodivergentes mediante una herramienta no intrusiva y compasiva, capaz de procesar información compleja del día a día (documentos extensos, imágenes saturadas) y estructurarla en pasos digeribles y con soporte gamificado.</p>
+<h3 id="12-visi%C3%B3n">1.2. Visión</h3>
+<p>Convertirse en el estándar arquitectónico open-source de accesibilidad cognitiva, demostrando cómo combinar infraestructura <em>Serverless</em>, modelos multimodales eficientes (Phi-4) e interfaces <em>Calm-UI</em> para que la tecnología se adapte activamente a las necesidades neuronales del usuario.</p>
+<h3 id="13-alcance-del-proyecto">1.3. Alcance del Proyecto</h3>
+<p>La aplicación abarca flujos de autenticación b2c segura, ingestión multimodal de documentos e imágenes, procesamiento conversacional, inyección dinámica de configuración (lectura inmersiva, nivel de lectura, text-to-speech), persistencia en bases NoSQL, y una interfaz rica con soporte para reestructuración del foco y recordatorios delegados por email.</p>
+<hr>
+<h2 id="2-requerimientos-del-sistema">2. Requerimientos del Sistema</h2>
+<h3 id="21-requerimientos-funcionales-rf">2.1. Requerimientos Funcionales (RF)</h3>
+<ul>
+<li>
+<p><strong>RF-01 (Autenticación e Identidad):</strong>
+Inicio y cierre de sesión seguro delegado mediante Microsoft Entra ID (Azure AD) a través del motor NextAuth.js.</p>
+</li>
+<li>
+<p><strong>RF-02 (Procesamiento Multimodal de Documentos):</strong>
+Soporte para la ingesta y abstracción de textos planos (<code>.txt</code>), Word (<code>.docx</code>), PDF e Imágenes pesadas (<code>.jpg</code>, <code>.png</code>).</p>
+</li>
+<li>
+<p><strong>RF-03 (Personalización Cognitiva):</strong>
+Selección dinámica del Nivel de Lectura, Tono Emocional del bot, temas de Alto Contraste para la fatiga visual y activación de motores Text-To-Speech.</p>
+</li>
+<li>
+<p><strong>RF-04 (IA Conversacional Estructurada):</strong>
+El agente procesa documentos y genera un flujo semántico de 3 pasos: [1] Síntesis Corta, [2] Explicación simplificada, y [3] Desglose JSON interactivo que el Front-End transforma en &quot;Tarjetas de Paso&quot;.</p>
+</li>
+<li>
+<p><strong>RF-05 (Soporte Text-To-Speech e Inmersivo):</strong> Integración con botones de Lectura Inmersiva (<code>Azure Immersive Reader</code>) acoplados directamente en los nodos de respuesta del chat.</p>
+</li>
+<li>
+<p><strong>RF-06 (Notificaciones y Tareas):</strong> Envío asíncrono de recordatorios de tareas hacia el correo electrónico del usuario.</p>
+</li>
+<li>
+<p><strong>RF-07 (Gamificación Positiva):</strong>
+Al completarse todas las dependencias de una tarjeta de pasos interactiva, se proveerá retroalimentación motivacional visual (confeti).</p>
+</li>
+</ul>
+<h3 id="22-requerimientos-no-funcionales-rnf">2.2. Requerimientos No Funcionales (RNF)</h3>
+<ul>
+<li>
+<p><strong>RNF-01 (Performance y UX Calmada):</strong>
+La arquitectura frontend debe prevenir cambios repentinos de UI. Utiliza renderizado con estado diferido y animaciones de resorte fluidas de <code>Framer Motion</code>.</p>
+</li>
+<li>
+<p><strong>RNF-02 (Disponibilidad y Latencia):</strong>
+Tiempos de inferencia optimizados al invocar modelos eficientes (Phi-4) a través del endpoint unificado de Azure AI Foundry.</p>
+</li>
+<li>
+<p><strong>RNF-03 (Tolerancia a Fallos Multimodal):</strong>
+Si los servicios en la nube (AI Document Intelligence) sufren <code>timeouts</code>, el sistema aplica mecanismos de retries (backoff/polling) y delega tareas ligeras a extractores de texto nativos de JS (<code>mammoth</code>, <code>pdf-parse</code>).</p>
+</li>
+<li>
+<p><strong>RNF-04 (Privacidad y Seguridad):</strong>
+No hay persistencia de PII (Información Personalmente Identificable) en los logs de depuración. La aplicación inyecta variables secretas solo en contexto Node (Server Actions).</p>
+</li>
+</ul>
+<hr>
+<h2 id="3-historias-de-usuario-user-stories">3. Historias de Usuario (User Stories)</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Historia de Usuario</th>
+<th>Criterios de Aceptación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>US-01</strong></td>
+<td>Como usuario con TDAH, quiero subir mi syllabus universitario en Word para que el agente lo desglose en pequeñas tarjetas interactivas de lectura.</td>
+<td>El sistema debe extraer el texto del <code>.docx</code>, inyectarlo al contexto del SLM (Phi-4), y devolver la UI de Tarjetas de Paso.</td>
+</tr>
+<tr>
+<td><strong>US-02</strong></td>
+<td>Como persona con dislexia, quiero configurar la IA para usar siempre un lenguaje simple y poder activar &quot;Lectura inmersiva&quot; con un solo clic.</td>
+<td>Las preferencias deben guardarse en BBDD para persistir en otras sesiones y el botón Text-to-Speech debe renderizarse en todos los mensajes.</td>
+</tr>
+<tr>
+<td><strong>US-03</strong></td>
+<td>Como usuario vulnerable al estrés y fatiga de decisión, quiero que el bot tenga un modo &quot;Pausa Activa&quot;.</td>
+<td>La UI presentará un overlay que ocupa toda la pantalla con un ejercicio de respiración y cronómetro pomodoro.</td>
+</tr>
+<tr>
+<td><strong>US-04</strong></td>
+<td>Como usuario con memoria de trabajo limitada, quiero enviar por email una tarjeta de &quot;Paso 2&quot; directamente a mi bandeja de entrada.</td>
+<td>Un botón de 'Campana' junto al paso invocará Azure Communication Services de forma asíncrona para despachar un correo sin salir del chat.</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="4-arquitectura-y-stack-tecnol%C3%B3gico-recursos">4. Arquitectura y Stack Tecnológico (Recursos)</h2>
+<p>La arquitectura sigue el patrón <strong>Fullstack Serverless</strong> acoplada en un solo repositorio.</p>
+<h3 id="frontend">Frontend</h3>
+<ul>
+<li><strong>Framework Core:</strong> Next.js 15 (React 19) estructurado bajo <code>App Router</code>.</li>
+<li><strong>Estilos:</strong> Tailwind CSS (v4) integrado sin clases intrusivas complejas, en favor de la usabilidad.</li>
+<li><strong>Animaciones:</strong> Framer Motion (Transiciones de tarjetas, modales y overlays).</li>
+<li><strong>Gestión de Formatos:</strong> <code>react-markdown</code>.</li>
+<li><strong>Iconografía:</strong> <code>lucide-react</code>.</li>
+</ul>
+<h3 id="backend--middleware-nextjs-server-actions">Backend &amp; Middleware (Next.js Server Actions)</h3>
+<ul>
+<li><strong>Runtime:</strong> Entorno Edge y Node.js para peticiones y enrutamiento <code>/api</code>.</li>
+<li><strong>Autenticación B2B/B2C:</strong> <code>next-auth</code> (v4) configurado con <code>@azure/identity</code> / Azure AD (<code>Microsoft Entra ID</code>).</li>
+</ul>
+<h3 id="servicios-cloud-azure-data--identity">Servicios Cloud (Azure Data &amp; Identity)</h3>
+<ul>
+<li>
+<p><strong>Azure Cosmos DB para NoSQL:</strong> Repositorio principal; persiste historiales de chat y preferencias de usuario (bajo latencia). Incluye rutinas de inicialización determinísticas (<code>scripts/seed-db.ts</code>) para despliegues Zero-Friction.</p>
+</li>
+<li>
+<p><strong>Azure Communication Services (Email):</strong> Servicio SMTP transaccional serverless para envío de recordatorios de tarjetas.</p>
+</li>
+<li>
+<p><strong>Microsoft Entra ID (Azure AD):</strong> Proveedor de autoridad para cuentas.</p>
+</li>
+</ul>
+<h3 id="ecosistema-de-inteligencia-artificial">Ecosistema de Inteligencia Artificial</h3>
+<p><em>El corazón del procesamiento de CogniCare no se basa en el endpoint de &quot;OpenAI&quot;, sino que se apoya en el stack de servicios cognitivos de nueva generación.</em></p>
+<ul>
+<li>
+<p><strong>Azure AI Foundry (SLM / LLM Core):</strong> Configurado con el modelo base inteligente <strong><code>Phi-4-multimodal-instruct</code></strong> para razonamiento lógico complejo sobre documentos pesados y control estricto de JSON format.</p>
+</li>
+<li>
+<p><strong>Azure Document Intelligence (OCR Avanzado):</strong> Utiliza el modelo <code>prebuilt-layout</code> para realizar polling y entender estructuras densas (fórmulas, tablas) en archivos PDFs subidos por el usuario.</p>
+</li>
+<li>
+<p><strong>Azure AI Vision (Image Analysis):</strong> Analiza subidas tipo JPG/PNG para extraer características estáticas o <code>readResults</code> antes de pasarlas a Phi-4 Multimodal.</p>
+</li>
+<li>
+<p><strong>Azure Immersive Reader:</strong> Componente incrustado para manipulación, escalado de texto y soporte fonético asistido por voz.</p>
+</li>
+</ul>
+<h3 id="41-contenedorizaci%C3%B3n-y-despliegue-cloud-native-docker">4.1. Contenedorización y Despliegue Cloud-Native (Docker)</h3>
+<p>El ecosistema completo está diseñado para despliegues orquestados (Ej: Azure Container Apps o AKS) respetando los lineamientos <strong>12-Factor App</strong> mediante un <code>Dockerfile</code> optimizado en 3 etapas (Multi-stage build):</p>
+<ol>
+<li>
+<p><strong>Etapa de Compilación:</strong> Compilación del entorno Next.js mediante el modo <code>standalone</code> (output tracing) para comprimir el tamaño final excluyendo librerías residuales.</p>
+</li>
+<li>
+<p><strong>Capa Zero-Trust (Seguridad):</strong> La imagen final (<code>node:20-alpine</code>) se ejecuta exclusivamente bajo un usuario restringido y no-root (<code>uid: 1001 nextjs</code>), mitigando masivamente ataques de elevación de privilegios en el clúster.</p>
+</li>
+<li>
+<p><strong>Inyección Dinámica:</strong> No existen configuraciones hardcodeadas; los puertos (ej: <code>PORT 3000</code>) y secretos se inyectan en tiempo de ejecución de la imagen permitiendo la transportabilidad absoluta del contenedor.</p>
+</li>
+</ol>
+<hr>
+<h2 id="5-diagramas-de-arquitectura-mermaid">5. Diagramas de Arquitectura (Mermaid)</h2>
+<h3 id="51-arquitectura-de-componentes-c4-nivel-2-containers">5.1. Arquitectura de Componentes (C4 Nivel 2: Containers)</h3>
+<p>Este diagrama describe cómo interactúan los servicios Serverless de Next.js con la capa nativa de Azure en la nube.</p>
+<pre><code class="language-mermaid"><div class="mermaid">graph TD
+    subgraph Client ["Capa de Interfaz Dinámica - Next.js/Browser"]
+        Frontend["React UI<br />(Tailwind + Framer Motion)"]
+        Immersive["Azure Immersive Reader Ext."]
+    end
+
+    subgraph ServerLayer ["Backend/Middleware - Next.js Server Actions"]
+        AuthAction["Acción Autenticación<br />(NextAuth + Entra ID)"]
+        PromptEngine["Motor de Inyección de Prompts"]
+        ParserNode["Parseador Multimodal<br />mammoth/pdf-parse"]
+    end
+
+    subgraph AzureCloud ["Recursos de Nube Microsoft Azure"]
+        Cosmos[("Azure Cosmos DB NoSQL")]
+        Entra["Microsoft Entra ID"]
+        ACS["Azure Communication Services"]
+        
+        subgraph Cognitive ["Capa Analítica & Azure AI Foundry"]
+            Foundry["Azure AI Foundry Endpoint<br />Modelo Phi-4"]
+            DocIntel["Azure Document Intelligence"]
+            AIVision["Azure AI Vision"]
+        end
+    end
+
+    %% Relaciones Cliente-Servidor
+    Frontend <-->|"HTTP/Server Actions"| PromptEngine
+    Frontend <-->|"Auth Check"| AuthAction
+    Frontend -->|"Lectura por Voz"| Immersive
+    Frontend -->|"Sube Archivos"| ParserNode
+
+    %% Autenticación
+    AuthAction <-->|"OAuth 2.0 / OIDC"| Entra
+
+    %% Flujo de Documentos y Contexto
+    ParserNode -->|"Payload binario .pdf"| DocIntel
+    ParserNode -->|"Payload imagen .jpg"| AIVision
+    DocIntel -->|"Texto Plano/Tablas"| PromptEngine
+    AIVision -->|"Texto OCR / Etiquetas"| PromptEngine
+
+    %% Flujo del Chat 
+    PromptEngine -->|"Historial + Preferencias"| Cosmos
+    PromptEngine -->|"JSON Prompt Estructurado"| Foundry
+    Foundry -->|"JSON + Narrativa en Español"| Frontend
+
+    %% Notificaciones
+    PromptEngine -->|"Dispara SMTP"| ACS
+</div></code></pre>
+<h3 id="52-flujo-de-secuencia-ingesta-sem%C3%A1ntica-y-respuesta-del-agente">5.2. Flujo de Secuencia: Ingesta Semántica y Respuesta del Agente</h3>
+<p>Un reto técnico resuelto en el proyecto es lograr que la inteligencia artificial responda siempre con un contexto útil (sin repeticiones) respetando la gramática en lenguaje español, mediante mitigación exhaustiva en la configuración de &quot;penalties&quot;.</p>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    participant User as Usuario
+    participant Front as UI (React)
+    participant Edge as Server Action (ai-agent)
+    participant AzureOCR as Document Intelligence
+    participant Cosmos as Cosmos DB
+    participant Foundry as Azure AI Foundry (Phi-4)
+
+    User->>Front: Sube "Documento.pdf" e ingresa "Explícame esto en pasos"
+    Front->>Edge: extractTextFromFile(PDF Base64)
+    
+    rect rgb(230, 240, 255)
+        Note right of Edge: Ingestión Asíncrona
+        Edge->>AzureOCR: POST /documentModels/prebuilt-layout:analyze
+        AzureOCR-->>Edge: OK (Polling iniciado)
+        loop Cada 1 Seg.
+            Edge->>AzureOCR: GET /analyzeResults/{id}
+            AzureOCR-->>Edge: "succeeded" + Texto Extraído
+        end
+    end
+
+    Edge->>Cosmos: Obtener Preferencias User (readingLevel, tone)
+    Cosmos-->>Edge: Preferencias (simple, empático)
+
+    Note right of Edge: System Prompt Injection
+    Edge->>Foundry: POST /v1/chat/completions <br /> System Prompt restrictivo + Historial + [SOURCE DOC]
+    Note right of Foundry: temperature: 0.7 <br /> top_p: 0.95
+    
+    Foundry-->>Edge: JSON response (Síntesis + Card Data JSON + Justificación)
+    
+    Note right of Edge: Fallback & Parsing Guardrails
+    Edge->>Front: Retorna objeto tipado AgentMessage
+    Front->>User: Renderiza Mensajes, Botones Inmersivos y Tarjetas.
+</div></code></pre>
+<h3 id="53-flujo-de-secuencia-an%C3%A1lisis-viso-cognitivo-de-im%C3%A1genes">5.3. Flujo de Secuencia: Análisis Viso-Cognitivo de Imágenes</h3>
+<p>Cuando el usuario adjunta una fotografía, esquema o captura de pantalla (ej. foto de una pizarra o apuntes en papel), el sistema redirige la extracción a <strong>Azure AI Vision</strong> para obtener el texto y un título descriptivo antes de enviarlo al razonamiento conversacional:</p>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    participant User as Usuario
+    participant Front as UI (React)
+    participant Edge as Server Action (ai-agent)
+    participant Vision as Azure AI Vision
+    participant Foundry as Azure AI Foundry (Phi-4)
+
+    User->>Front: Sube "Pizarra.jpg" y hace una pregunta
+    Front->>Edge: extractTextFromImage(Image Base64)
+
+    rect rgb(230, 250, 230)
+        Note right of Edge: Extracción Visual Inteligente
+        Edge->>Vision: POST /imageanalysis:analyze?features=read,caption
+        Vision-->>Edge: HTTP 200 (readResults + captionResult)
+    end
+    
+    Note right of Edge: Consolidación Estructurada
+    Edge->>Edge: Construye payload: [CAPTURA] + [TEXTO DETECTADO]
+    
+    Edge->>Foundry: POST /v1/chat/completions <br /> Inyecta payload visual al modelo Phi-4
+    Foundry-->>Edge: Generación de Pasos o Síntesis analizando la imagen
+    
+    Edge->>Front: Retorna contexto AgentMessage formateado
+    Front->>User: Muestra Tareas interactivas deduciéndolas de la fotografía
+</div></code></pre>
+<hr>
+<h2 id="6-referencia-t%C3%A9cnica-del-%22cognicare-agent%22-ai-agentts">6. Referencia Técnica del &quot;CogniCare Agent&quot; (<code>ai-agent.ts</code>)</h2>
+<p>Para asegurar el éxito en las respuestas dirigidas a personas neurodivergentes de la aplicación, el &quot;Prompt Pipeline&quot; (Motor de inyección Cero-Shot de IA) contiene reglas robustas para proteger contra alucinaciones (Fabricated Info) y colapsos de lenguaje.</p>
+<h3 id="61-resolviendo-colapsos-generativos-y-%22sopas-de-json%22">6.1. Resolviendo Colapsos Generativos y &quot;Sopas de JSON&quot;</h3>
+<p>La gran mayoría de modelos configurados por defecto tienen problemas para generar JSON extensos en idioma español.
+En <code>src/lib/ai-agent.ts</code>, se eliminaron configuraciones nocivas como un valor superior a <code>0.0</code> en el <code>frequency_penalty</code>.</p>
+<ul>
+<li>
+<p><strong>Por qué:</strong> El idioma español depende intensamente de las conjunciones (el, la, por, para, que). Si la API de Azure AI Foundry fuerza parámetros de penalidad en alta intensidad, el modelo colapsa porque no sabe cómo estructurar sintaxis sin re-usar esas mismas preposiciones, produciendo respuestas ilegibles como <em>&quot;Aplica del la enc el con el&quot;</em> en los objetos JSON.</p>
+</li>
+<li>
+<p><strong>La solución actual:</strong> Se implementan rangos de temperatura optimizados (<code>temperature=0.2</code>) junto con <code>top_p=0.95</code>, produciendo cadenas determinísticas y perfectas sin romper la gramática.</p>
+</li>
+</ul>
+<h3 id="62-arquitectura-de-prompts-obligatoria-format-guardrails">6.2. Arquitectura de Prompts Obligatoria (Format Guardrails)</h3>
+<p>La estructura del sistema prohíbe el metatexto conversacional o &quot;Meta-talk&quot; indeseado (<em>&quot;Claro, aquí tienes tu proceso...&quot;</em>). La directriz actual sobre el modelo <code>Phi-4</code> exige el uso riguroso de <code>Markdown Headers</code>:</p>
+<ol>
+<li><code>### Síntesis</code>: Explicación nuclear y reducida.</li>
+<li><code>### Te explico de manera sencilla</code>: Adaptado vía prompt (basado en Cosmos DB) al <em>reading_level</em> del usuario.</li>
+<li><code>[JSON_START]</code>: Nodo que inyecta tareas procesables para el gestor reactivo del Frontend.</li>
+<li><code>[EXPLICACION_START]</code>: Justificación neurolingüística del modelo al momento de elegir el tono. Esta variable no se pinta en pantalla, sino que abre el Modal Popup <em>&quot;Explicar Respuesta&quot;</em> de la UI.</li>
+</ol>
+<hr>
+
+</body>
+</html>

@@ -2,7 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { ImmersiveReaderButton } from '@/components/ImmersiveReaderButton';
+import { sendTaskReminder } from '@/lib/notifications';
 import { processWithAgent, type AgentMessage } from '@/lib/ai-agent';
 import {
   Volume2,
@@ -21,18 +23,13 @@ import {
   Info,
   Image as ImageIcon,
   Paperclip,
-  FileText
+  FileText,
+  Bell,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import ReactMarkdown from 'react-markdown';
-import confetti from 'canvas-confetti';
-
-const cleanEmojis = (str: string) => {
-  if (!str) return str;
-  return str.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
-};
 import { useSession, signOut } from "next-auth/react";
+
 import {
   persistMessage,
   persistPreferences,
@@ -41,10 +38,18 @@ import {
   deleteUserMessageLog,
   extractTextFromFile
 } from "@/lib/actions";
+import { analyzeComplexDocument, extractTextFromImage } from '@/lib/document-analysis';
+import ReactMarkdown from 'react-markdown';
+import confetti from 'canvas-confetti';
+
+const cleanEmojis = (str: string) => {
+  if (!str) return str;
+  return str.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+};
 
 export default function CogniCareApp() {
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const [messages, setMessages] = useState<AgentMessage[]>([
     { role: 'assistant', content: '¡Hola! Soy CogniCare. Estoy aquí para ayudarte a organizar tu día y simplificar las tareas que parezcan pesadas. ¿En qué podemos trabajar hoy?', type: 'text' }
   ]);
@@ -75,7 +80,6 @@ export default function CogniCareApp() {
   const [attachMenuOpen, setAttachMenuOpen] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync with Cosmos DB when session changes
   useEffect(() => {
@@ -152,7 +156,7 @@ export default function CogniCareApp() {
       } else {
         newSet.add(stepId);
         
-        // Check if all steps in this message are completed
+        // Verificamos si todos los pasos de este mensaje están completados para celebrar
         const [msgIdxStr] = stepId.split('-');
         const msgIdx = parseInt(msgIdxStr, 10);
         const msg = messages[msgIdx];
@@ -172,6 +176,30 @@ export default function CogniCareApp() {
       }
       return newSet;
     });
+  };
+
+  const handleNotify = async (taskTitle: string, stepTitle: string, stepDescription: string = "") => {
+    const userEmail = session?.user?.email || "usuario@cognicare.com";
+    
+    // Feedback visual simple (Toast temporal)
+    const toast = document.createElement('div');
+    toast.textContent = "📫 Preparando aviso...";
+    toast.className = "fixed bottom-10 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-full shadow-2xl z-[200] font-bold animate-bounce";
+    document.body.appendChild(toast);
+
+    try {
+      const result = await sendTaskReminder(userEmail, taskTitle, stepTitle, stepDescription);
+      if (result.success) {
+        toast.textContent = "¡Aviso enviado al email! ✅";
+        toast.className = "fixed bottom-10 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-2xl z-[200] font-bold";
+      } else {
+        toast.textContent = "Revisa el remitente en Azure ✉️";
+        toast.className = "fixed bottom-10 left-1/2 -translate-x-1/2 bg-zinc-950 text-white px-6 py-3 rounded-full shadow-2xl z-[200] font-bold";
+      }
+    } catch {
+      toast.textContent = "Fallo de conexión ❌";
+    }
+    setTimeout(() => toast.remove(), 4000);
   };
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -207,29 +235,6 @@ export default function CogniCareApp() {
     }
   }, [messages]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert("El archivo es demasiado grande. Por favor, elige uno de menos de 5MB.");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        if (file.type.startsWith('image/')) {
-          setSelectedImage(base64);
-          setSelectedFile(null);
-        } else {
-          setSelectedFile({ base64, name: file.name, type: file.type });
-          setSelectedImage(null);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleSend = async () => {
     if ((!input.trim() && !selectedImage && !selectedFile) || isProcessing) return;
 
@@ -248,11 +253,27 @@ export default function CogniCareApp() {
     let docText = "";
     if (selectedFile) {
       try {
-        docText = await extractTextFromFile(selectedFile.base64, selectedFile.type);
-      } catch (e: any) {
-        alert("Error al procesar el archivo: " + e.message);
+        // Mejoramos la extracción usando Document Intelligence para PDFs
+        if (selectedFile.type === "application/pdf") {
+          docText = await analyzeComplexDocument(selectedFile.base64, selectedFile.type);
+        } else {
+          docText = await extractTextFromFile(selectedFile.base64, selectedFile.type);
+        }
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        alert("Error al procesar el archivo: " + message);
         setIsProcessing(false);
         return;
+      }
+    }
+
+    if (selectedImage) {
+      try {
+        // Realizamos OCR especializado en la imagen para ayudar al agente
+        const ocrText = await extractTextFromImage(selectedImage);
+        docText = ocrText;
+      } catch (e) {
+        console.error("Error en OCR:", e);
       }
     }
 
@@ -260,7 +281,7 @@ export default function CogniCareApp() {
     const userMsg: AgentMessage = { 
       role: 'user', 
       content: userInput || (selectedFile ? `Analizando: ${selectedFile.name}` : (selectedImage ? "Analiza esta imagen." : "")),
-      documentText: selectedFile ? docText : undefined,
+      documentText: docText || undefined,
       image: selectedImage || undefined,
       id: selectedFile ? `file-${selectedFile.name}` : undefined // Using ID to store filename for the UI box
     };
@@ -338,7 +359,7 @@ export default function CogniCareApp() {
   return (
     <main className={cn(
       "min-h-screen relative flex flex-col items-center p-4 md:p-8 transition-all duration-700 overflow-hidden",
-      preferences.highContrast ? "bg-black text-white" : "sky-bg"
+      preferences.highContrast ? "bg-zinc-950 text-zinc-200 transition-none" : "sky-bg"
     )}>
       {/* Background Clouds */}
       {!preferences.highContrast && (
@@ -364,13 +385,13 @@ export default function CogniCareApp() {
           <div className="flex items-center gap-4">
             <div className={cn(
               "w-14 h-14 rounded-2xl flex items-center justify-center calm-shadow border-2",
-              preferences.highContrast ? "bg-black border-white text-white" : "bg-primary/10 border-transparent text-primary"
+              preferences.highContrast ? "bg-zinc-950 border-slate-800 text-zinc-200" : "bg-primary/10 border-transparent text-primary"
             )}>
               <Brain className="w-9 h-9" />
             </div>
             <div>
-              <h1 className={cn("text-2xl font-black", preferences.highContrast ? "text-white" : "text-[#2C3E50]")}>CogniCare</h1>
-              <p className={cn("text-xs font-bold uppercase tracking-tighter", preferences.highContrast ? "text-blue-300" : "text-primary")}>Tu asistente de calma</p>
+              <h1 className={cn("text-2xl font-black", preferences.highContrast ? "text-zinc-200" : "text-[#2C3E50]")}>CogniCare</h1>
+              <p className={cn("text-xs font-bold uppercase tracking-tighter", preferences.highContrast ? "text-indigo-300" : "text-primary")}>Tu asistente de calma</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -381,8 +402,8 @@ export default function CogniCareApp() {
                 className={cn(
                   "px-5 py-3 rounded-2xl flex items-center gap-3 font-bold transition-all interactive-element calm-shadow",
                   status === 'authenticated' 
-                    ? (preferences.highContrast ? "bg-black border-2 border-red-500 text-red-500" : "bg-red-50 border-red-100 text-red-600 hover:bg-red-100")
-                    : (preferences.highContrast ? "bg-black border-2 border-white text-white" : "bg-blue-600 text-white")
+                    ? (preferences.highContrast ? "bg-zinc-950 border border-slate-800 text-zinc-400 hover:bg-[#1A1A2E]" : "bg-red-50 border-red-100 text-red-600 hover:bg-red-100")
+                    : (preferences.highContrast ? "bg-slate-900 border-slate-800 text-zinc-200" : "bg-blue-600 text-white")
                 )}
               >
                 {status === 'authenticated' ? (
@@ -403,7 +424,7 @@ export default function CogniCareApp() {
               onClick={() => setFocusMode(true)}
               className={cn(
                 "px-6 py-3 rounded-2xl flex items-center gap-2 interactive-element font-bold calm-shadow transition-colors",
-                preferences.highContrast ? "bg-black border-2 border-white text-white" : "bg-[#26C782] text-white"
+                preferences.highContrast ? "bg-slate-900 border-slate-800 text-zinc-200" : "bg-[#26C782] text-white"
               )}
             >
               <Timer className="w-5 h-5" />
@@ -415,7 +436,7 @@ export default function CogniCareApp() {
               title="Historial de Consultas"
               className={cn(
                 "px-5 py-3 rounded-2xl border-2 flex items-center gap-2 font-bold transition-all interactive-element calm-shadow",
-                preferences.highContrast ? "bg-black border-white text-white" : "bg-white border-white text-[#2C3E50] hover:bg-gray-100"
+                preferences.highContrast ? "bg-zinc-950 border-slate-800 text-zinc-200" : "bg-white border-white text-[#2C3E50] hover:bg-gray-100"
               )}
             >
               <History className="w-5 h-5" />
@@ -425,7 +446,7 @@ export default function CogniCareApp() {
               onClick={() => setSettingsOpen(true)}
               className={cn(
                 "p-3 rounded-2xl border-2 transition-all interactive-element calm-shadow",
-                preferences.highContrast ? "bg-black border-white text-white" : "bg-white border-white text-[#2C3E50] hover:bg-gray-100"
+                preferences.highContrast ? "bg-zinc-950 border-slate-800 text-zinc-200" : "bg-white border-white text-[#2C3E50] hover:bg-gray-100"
               )}
             >
               <Settings className="w-6 h-6" />
@@ -438,7 +459,7 @@ export default function CogniCareApp() {
       <div className={cn(
         "flex-1 w-full max-w-5xl flex flex-col bg-white/80 backdrop-blur-2xl rounded-[3rem] overflow-hidden calm-shadow border border-white/60 transition-all duration-500",
         focusMode ? "h-0 opacity-0 scale-95" : "h-[75vh]",
-        preferences.highContrast && "bg-black border-white border-2 text-white"
+        preferences.highContrast && "bg-slate-900 border-slate-800 border text-zinc-200"
       )}>
         {/* Chat Area */}
         <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 scroll-smooth" ref={scrollRef}>
@@ -456,8 +477,8 @@ export default function CogniCareApp() {
                 <div className={cn(
                   "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 calm-shadow border-2 transition-all",
                   msg.role === 'user' 
-                    ? (preferences.highContrast ? "bg-black border-white text-white" : "bg-primary border-primary text-white") 
-                    : (preferences.highContrast ? "bg-black border-white text-white" : "bg-white border-white text-secondary")
+                    ? (preferences.highContrast ? "bg-zinc-950 border-slate-800 text-zinc-200" : "bg-primary border-primary text-white") 
+                    : (preferences.highContrast ? "bg-zinc-950 border-slate-800 text-zinc-200" : "bg-white border-white text-secondary")
                 )}>
                   {msg.role === 'user' ? <User className="w-7 h-7" /> : <Brain className="w-7 h-7" />}
                 </div>
@@ -471,12 +492,12 @@ export default function CogniCareApp() {
                     msg.role === 'user' 
                       ? "bg-blue-600 text-white rounded-tr-none shadow-blue-100" 
                       : "bg-white border border-white/50 rounded-tl-none",
-                    preferences.highContrast && (msg.role === 'user' ? "bg-blue-900 shadow-none border-white" : "bg-black text-white border-white border-2")
+                    preferences.highContrast && (msg.role === 'user' ? "bg-blue-500 shadow-none border-slate-800 text-zinc-950" : "bg-slate-900 text-zinc-200 border-slate-800 border")
                   )}>
                     <div className={cn(
                       "prose prose-sm md:prose-base max-w-none whitespace-pre-wrap transition-colors duration-500",
-                      (msg.role === 'user' || preferences.highContrast) ? "prose-invert" : "",
-                      preferences.highContrast ? "text-white" : (msg.role === 'user' ? "text-white" : "text-[#2C3E50]")
+                      (preferences.highContrast && msg.role !== 'user') || (!preferences.highContrast && msg.role === 'user') ? "prose-invert" : "",
+                      preferences.highContrast ? (msg.role === 'user' ? "text-zinc-950" : "text-zinc-200") : (msg.role === 'user' ? "text-white" : "text-[#2C3E50]")
                     )}>
                       <ReactMarkdown>
                         {cleanEmojis(msg.content)}
@@ -484,13 +505,15 @@ export default function CogniCareApp() {
                     </div>
                     {msg.image && (
                       <div className="mt-4 rounded-xl overflow-hidden border-2 border-white/20">
-                        <img src={msg.image} alt="Usuario" className="max-w-full h-auto" />
+                        <Image src={msg.image} alt="Usuario" width={400} height={300} unoptimized className="max-w-full h-auto" />
                       </div>
                     )}
                     {msg.id?.startsWith('file-') && (
                       <div className={cn(
                         "mt-4 p-4 rounded-2xl flex items-center gap-3 border transition-colors",
-                        preferences.highContrast ? "bg-white/10 border-white text-white" : "bg-blue-50 border-blue-100 text-blue-700"
+                        preferences.highContrast 
+                          ? (msg.role === 'user' ? "bg-white/20 border-white/30 text-zinc-950" : "bg-slate-900/90 border-slate-800 text-zinc-200") 
+                          : "bg-blue-50 border-blue-100 text-[#2C3E50]"
                       )}>
                         <FileText className="w-8 h-8" />
                         <div className="flex flex-col">
@@ -512,35 +535,36 @@ export default function CogniCareApp() {
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
                           className={cn(
-                            "p-8 rounded-[2.5rem] border-2 flex items-center gap-5 calm-shadow",
+                            "p-8 rounded-[2.5rem] border-2 flex items-center gap-5 calm-shadow relative overflow-hidden",
                             preferences.highContrast 
-                              ? "bg-black border-white text-white shadow-none" 
-                              : "bg-orange-50 border-orange-100"
+                              ? "bg-zinc-950 border-slate-800 text-zinc-200 shadow-none" 
+                              : "bg-gradient-to-br from-indigo-50/80 to-blue-50/80 border-indigo-100"
                           )}
                         >
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-white/40 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
                           <div className={cn(
-                            "p-4 rounded-2xl shadow-sm",
-                            preferences.highContrast ? "bg-white/10" : "bg-white"
+                            "p-4 rounded-2xl shadow-sm z-10",
+                            preferences.highContrast ? "bg-slate-900/90" : "bg-white border border-indigo-50"
                           )}>
-                            <PenTool className={cn("w-8 h-8", preferences.highContrast ? "text-white" : "text-orange-500")} />
+                            <PenTool className={cn("w-8 h-8", preferences.highContrast ? "text-zinc-200" : "text-indigo-500")} />
                           </div>
-                          <div>
+                          <div className="z-10">
                             <p className={cn(
                               "text-xs font-black uppercase tracking-[0.2em] mb-2",
-                              preferences.highContrast ? "text-white/60" : "text-orange-400"
+                              preferences.highContrast ? "text-zinc-400" : "text-indigo-600/80"
                             )}>Tu Objetivo</p>
                             <div className="space-y-3">
                               <p className={cn(
                                 "text-2xl font-black leading-tight",
-                                preferences.highContrast ? "text-white" : "text-orange-900"
+                                preferences.highContrast ? "text-zinc-200" : "text-slate-800"
                               )}>
                                 {messages[i-1].content}
                               </p>
                               <p className={cn(
                                 "text-lg font-medium",
-                                preferences.highContrast ? "text-white/90" : "text-orange-800/90"
+                                preferences.highContrast ? "text-zinc-200" : "text-slate-600"
                               )}>
-                                Sigue estos pasos y dale clic al botón Completar cada vez que finalices una tarea. Vas a hacerlo muy bien.
+                                Sigue estos pasos y dale clic al botón Completar cada vez que finalices una tarea. ¡Vas a hacerlo muy bien!
                               </p>
                             </div>
                           </div>
@@ -560,7 +584,7 @@ export default function CogniCareApp() {
                             className={cn(
                               "p-10 rounded-[3.5rem] border-2 transition-all duration-500 calm-shadow relative",
                               preferences.highContrast 
-                                ? "bg-black border-white shadow-none" 
+                                ? "bg-slate-900 border-2 border-slate-800 shadow-none" 
                                 : (isDone ? "bg-white border-orange-100 opacity-50 grayscale" : "bg-white border-blue-50/50 hover:border-primary/20")
                             )}
                           >
@@ -568,7 +592,7 @@ export default function CogniCareApp() {
                             <div className="flex justify-between items-start mb-8">
                               <h3 className={cn(
                                 "text-2xl font-black transition-colors leading-tight",
-                                isDone ? "text-gray-400" : (preferences.highContrast ? "text-white" : "text-[#34B5FF]")
+                                isDone ? "text-gray-400" : (preferences.highContrast ? "text-zinc-200" : "text-[#34B5FF]")
                               )}>
                                 Paso {idx + 1}
                                 {(() => {
@@ -579,18 +603,32 @@ export default function CogniCareApp() {
                                 })()}
                               </h3>
                               
-                              <button
-                                onClick={() => toggleStep(stepId)}
-                                className={cn(
-                                  "px-4 py-2 rounded-2xl border-2 flex items-center gap-2 font-bold transition-all duration-300",
-                                  isDone 
-                                    ? (preferences.highContrast ? "bg-white text-black border-white" : "bg-green-100 border-green-200 text-green-700")
-                                    : (preferences.highContrast ? "border-white text-white hover:bg-white hover:text-black" : "border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-600 bg-white")
-                                )}
-                              >
-                                <CheckCircle2 className={cn("w-5 h-5", isDone ? "scale-100" : "scale-90 opacity-40")} />
-                                <span>{isDone ? 'Completado' : 'Completar'}</span>
-                              </button>
+                              <div className="flex gap-3">
+                                <button
+                                  onClick={() => handleNotify(messages[i-1]?.content || "Tarea de CogniCare", step.title, step.bullets?.join(' ') || "")}
+                                  className={cn(
+                                    "p-2.5 rounded-2xl border-2 transition-all duration-300",
+                                    preferences.highContrast 
+                                      ? "border-white text-white hover:bg-[#1A1A2E]/80" 
+                                      : "border-blue-50 text-blue-400 hover:bg-blue-50 hover:border-[#2A2A4A]"
+                                  )}
+                                  title="Enviarme recordatorio por email"
+                                >
+                                  <Bell className="w-5 h-5" />
+                                </button>
+                                <button
+                                  onClick={() => toggleStep(stepId)}
+                                  className={cn(
+                                    "px-4 py-2 rounded-2xl border-2 flex items-center gap-2 font-bold transition-all duration-300",
+                                    isDone 
+                                      ? (preferences.highContrast ? "bg-slate-900 text-zinc-200 border-slate-800" : "bg-green-100 border-green-200 text-green-700")
+                                      : (preferences.highContrast ? "border-slate-800 text-[#F5F5F5] hover:bg-[#1A1A2E] hover:text-[#E0E0E0]" : "border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-600 bg-white")
+                                  )}
+                                >
+                                  <CheckCircle2 className={cn("w-5 h-5", isDone ? "scale-100" : "scale-90 opacity-40")} />
+                                  <span>{isDone ? 'Completado' : 'Completar'}</span>
+                                </button>
+                              </div>
                             </div>
 
                             {/* Bullets / Content */}
@@ -599,11 +637,11 @@ export default function CogniCareApp() {
                                 {step.bullets.map((bullet, bIdx) => (
                                   <li key={bIdx} className={cn(
                                     "flex gap-5 text-xl items-start leading-relaxed",
-                                    preferences.highContrast ? "text-white" : "text-[#2C3E50]"
+                                    preferences.highContrast ? "text-zinc-200" : "text-[#2C3E50]"
                                   )}>
                                     <span className={cn(
                                       "mt-3 w-2 h-2 rounded-full shrink-0",
-                                      preferences.highContrast ? "bg-white" : (isDone ? "bg-orange-300" : "bg-primary/50")
+                                      preferences.highContrast ? "bg-slate-900" : (isDone ? "bg-orange-300" : "bg-primary/50")
                                     )} />
                                     <span className={isDone ? "line-through opacity-50" : ""}>
                                       {cleanEmojis(bullet)}
@@ -617,12 +655,12 @@ export default function CogniCareApp() {
                             {step.duration && (
                               <div className={cn(
                                 "pt-8 border-t flex items-center gap-3",
-                                preferences.highContrast ? "border-white/30" : "border-orange-50/50"
+                                preferences.highContrast ? "border-slate-800/50" : "border-orange-50/50"
                               )}>
-                                <Timer className={cn("w-5 h-5", preferences.highContrast ? "text-white" : "text-orange-300")} />
+                                <Timer className={cn("w-5 h-5", preferences.highContrast ? "text-zinc-200" : "text-orange-300")} />
                                 <span className={cn(
                                   "text-xs font-black uppercase tracking-[0.2em]",
-                                  preferences.highContrast ? "text-white/80" : (isDone ? "text-orange-200" : "text-orange-400")
+                                  preferences.highContrast ? "text-[#F5F5F5]" : (isDone ? "text-orange-200" : "text-orange-400")
                                 )}>
                                   Tiempo estimado: {step.duration}
                                 </span>
@@ -679,14 +717,14 @@ export default function CogniCareApp() {
                         className={cn(
                           "flex items-center gap-2 px-5 py-2.5 rounded-2xl border transition-all interactive-element text-sm font-bold calm-shadow",
                           preferences.highContrast 
-                            ? (speakingId === i ? "bg-red-900 border-white text-white" : "bg-black border-white text-white")
+                            ? (speakingId === i ? "bg-red-900 border-white text-white" : "bg-zinc-950 border-slate-800 text-zinc-200")
                             : (speakingId === i ? "bg-red-50 border-red-200 text-red-600" : "bg-white border-border text-foreground")
                         )}
                       >
                         {speakingId === i ? (
                           <X className="w-5 h-5" />
                         ) : (
-                          <Volume2 className={cn("w-5 h-5", preferences.highContrast ? "text-white" : "text-primary")} />
+                          <Volume2 className={cn("w-5 h-5", preferences.highContrast ? "text-zinc-200" : "text-primary")} />
                         )}
                         <span>{speakingId === i ? 'Parar' : 'Escuchar'}</span>
                       </button>
@@ -711,12 +749,12 @@ export default function CogniCareApp() {
                           className={cn(
                             "flex items-center gap-2 px-5 py-2.5 rounded-2xl border transition-all interactive-element text-sm font-bold calm-shadow ml-auto",
                             preferences.highContrast 
-                              ? "bg-black border-white text-white"
-                              : "bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-100"
+                              ? "bg-zinc-950 border-slate-800 text-zinc-200"
+                              : "bg-blue-50 border-blue-100 text-blue-600 hover:bg-[#5A9EFF]/20"
                           )}
                           title="Explicar respuesta"
                         >
-                          <Info className={cn("w-5 h-5", preferences.highContrast ? "text-white" : "text-blue-500")} />
+                          <Info className={cn("w-5 h-5", preferences.highContrast ? "text-zinc-200" : "text-blue-500")} />
                           <span>Explicar respuesta</span>
                         </button>
                       )}
@@ -735,7 +773,7 @@ export default function CogniCareApp() {
               <div className={cn(
                 "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 calm-shadow border-2",
                 preferences.highContrast
-                  ? "bg-black border-white text-white"
+                  ? "bg-zinc-950 border-slate-800 text-zinc-200"
                   : "bg-white border-white text-secondary"
               )}>
                 <Brain className="w-7 h-7 animate-pulse" />
@@ -743,7 +781,7 @@ export default function CogniCareApp() {
               <div className={cn(
                 "max-w-[80%] px-7 py-5 rounded-[2.2rem] rounded-tl-none border calm-shadow",
                 preferences.highContrast
-                  ? "bg-black text-white border-white border-2"
+                  ? "bg-slate-900 text-zinc-200 border-slate-800 border"
                   : "bg-white border-white/50 text-[#2C3E50]"
               )}>
                 <div className="flex flex-col gap-6">
@@ -759,7 +797,7 @@ export default function CogniCareApp() {
                   {/* Active Pause / Breathing Exercise during loading */}
                   <div className={cn(
                     "flex flex-col items-center gap-4 p-6 rounded-2xl border",
-                    preferences.highContrast ? "bg-white/5 border-white/20" : "bg-blue-50/50 border-blue-100"
+                    preferences.highContrast ? "bg-slate-900 border-slate-800/50" : "bg-blue-50/50 border-blue-100"
                   )}>
                     <motion.div 
                       animate={{ 
@@ -773,7 +811,7 @@ export default function CogniCareApp() {
                       }}
                       className={cn(
                         "w-12 h-12 rounded-full shadow-lg flex items-center justify-center",
-                        preferences.highContrast ? "bg-white text-black" : "bg-[#A5D8FF]"
+                        preferences.highContrast ? "bg-slate-900 text-zinc-200" : "bg-[#A5D8FF]"
                       )}
                     >
                       <motion.div 
@@ -781,7 +819,7 @@ export default function CogniCareApp() {
                         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
                         className={cn(
                           "w-6 h-6 rounded-full",
-                          preferences.highContrast ? "bg-black" : "bg-white"
+                          preferences.highContrast ? "bg-zinc-950" : "bg-slate-900"
                         )}
                       />
                     </motion.div>
@@ -791,7 +829,7 @@ export default function CogniCareApp() {
                       transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
                       className={cn(
                         "text-sm font-black uppercase tracking-widest text-center",
-                        preferences.highContrast ? "text-white" : "text-primary"
+                        preferences.highContrast ? "text-zinc-200" : "text-primary"
                       )}
                     >
                       Inhala... Exhala...
@@ -810,7 +848,7 @@ export default function CogniCareApp() {
             <div className="flex gap-3 flex-wrap">
               {selectedImage && (
                 <div className="relative inline-block">
-                  <img src={selectedImage} alt="Preview" className="h-20 w-20 object-cover rounded-2xl border-2 border-primary calm-shadow" />
+                  <Image src={selectedImage} alt="Preview" width={80} height={80} unoptimized className="h-20 w-20 object-cover rounded-2xl border-2 border-primary calm-shadow" />
                   <button onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"><X className="w-3 h-3" /></button>
                 </div>
               )}
@@ -818,7 +856,7 @@ export default function CogniCareApp() {
                 <div className="relative inline-flex items-center gap-3 p-3 bg-blue-50 border-2 border-blue-200 rounded-2xl calm-shadow pr-8">
                   <FileText className="w-7 h-7 text-blue-500 shrink-0" />
                   <div className="flex flex-col">
-                    <span className="font-bold text-sm text-blue-900 truncate max-w-[140px]">{selectedFile.name}</span>
+                    <span className="font-bold text-sm text-zinc-700 truncate max-w-[140px]">{selectedFile.name}</span>
                     <span className="text-xs text-blue-600 uppercase">{selectedFile.type.split('/').pop()}</span>
                   </div>
                   <button onClick={() => setSelectedFile(null)} className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"><X className="w-3 h-3" /></button>
@@ -858,8 +896,8 @@ export default function CogniCareApp() {
                   className={cn(
                     "p-5 rounded-2xl border-2 transition-all interactive-element calm-shadow flex items-center gap-2 font-bold",
                     attachMenuOpen
-                      ? (preferences.highContrast ? "bg-white text-black border-white" : "bg-primary/10 border-primary text-primary")
-                      : (preferences.highContrast ? "bg-black border-white text-white" : "bg-white border-white text-primary hover:bg-gray-50")
+                      ? (preferences.highContrast ? "bg-slate-900 text-zinc-200 border-slate-800" : "bg-primary/10 border-primary text-primary")
+                      : (preferences.highContrast ? "bg-zinc-950 border-slate-800 text-zinc-200" : "bg-white border-white text-primary hover:bg-gray-50")
                   )}
                   title="Adjuntar archivo"
                 >
@@ -879,44 +917,44 @@ export default function CogniCareApp() {
                         transition={{ duration: 0.15 }}
                         className={cn(
                           "absolute bottom-full mb-3 left-0 z-20 rounded-[1.5rem] border-2 p-3 flex flex-col gap-2 min-w-[220px] calm-shadow",
-                          preferences.highContrast ? "bg-black border-white text-white" : "bg-white border-white"
+                          preferences.highContrast ? "bg-zinc-950 border-slate-800 text-zinc-200" : "bg-white border-white"
                         )}
                       >
-                        <p className={cn("text-xs font-black uppercase tracking-widest px-3 py-1 opacity-50", preferences.highContrast ? "text-white" : "text-[#2C3E50]")}>
+                        <p className={cn("text-xs font-black uppercase tracking-widest px-3 py-1 opacity-50", preferences.highContrast ? "text-zinc-200" : "text-[#2C3E50]")}>
                           Adjuntar archivo
                         </p>
                         <button
                           onClick={() => { imageInputRef.current?.click(); setAttachMenuOpen(false); }}
                           className={cn(
                             "flex items-center gap-4 px-4 py-4 rounded-xl transition-all text-left font-bold",
-                            preferences.highContrast ? "hover:bg-white/10" : "hover:bg-blue-50"
+                            preferences.highContrast ? "hover:bg-[#1A1A2E]/80" : "hover:bg-blue-50"
                           )}
                         >
-                          <div className={cn("p-2.5 rounded-xl", preferences.highContrast ? "bg-white/10" : "bg-blue-100")}>
-                            <ImageIcon className={cn("w-6 h-6", preferences.highContrast ? "text-white" : "text-blue-600")} />
+                          <div className={cn("p-2.5 rounded-xl", preferences.highContrast ? "bg-slate-900/90" : "bg-blue-500/20")}>
+                            <ImageIcon className={cn("w-6 h-6", preferences.highContrast ? "text-zinc-200" : "text-blue-600")} />
                           </div>
                           <div>
-                            <p className={cn("font-black text-base", preferences.highContrast ? "text-white" : "text-[#2C3E50]")}>
+                            <p className={cn("font-black text-base", preferences.highContrast ? "text-zinc-200" : "text-[#2C3E50]")}>
                               Imagen
                             </p>
-                            <p className={cn("text-xs font-medium opacity-60", preferences.highContrast ? "text-white" : "text-[#2C3E50]")}>JPG, PNG, GIF...</p>
+                            <p className={cn("text-xs font-medium opacity-60", preferences.highContrast ? "text-zinc-200" : "text-[#2C3E50]")}>JPG, PNG, GIF...</p>
                           </div>
                         </button>
                         <button
                           onClick={() => { docInputRef.current?.click(); setAttachMenuOpen(false); }}
                           className={cn(
                             "flex items-center gap-4 px-4 py-4 rounded-xl transition-all text-left font-bold",
-                            preferences.highContrast ? "hover:bg-white/10" : "hover:bg-green-50"
+                            preferences.highContrast ? "hover:bg-[#1A1A2E]/80" : "hover:bg-green-50"
                           )}
                         >
-                          <div className={cn("p-2.5 rounded-xl", preferences.highContrast ? "bg-white/10" : "bg-green-100")}>
-                            <FileText className={cn("w-6 h-6", preferences.highContrast ? "text-white" : "text-green-600")} />
+                          <div className={cn("p-2.5 rounded-xl", preferences.highContrast ? "bg-slate-900/90" : "bg-green-100")}>
+                            <FileText className={cn("w-6 h-6", preferences.highContrast ? "text-zinc-200" : "text-green-600")} />
                           </div>
                           <div>
-                            <p className={cn("font-black text-base", preferences.highContrast ? "text-white" : "text-[#2C3E50]")}>
+                            <p className={cn("font-black text-base", preferences.highContrast ? "text-zinc-200" : "text-[#2C3E50]")}>
                               Documento
                             </p>
-                            <p className={cn("text-xs font-medium opacity-60", preferences.highContrast ? "text-white" : "text-[#2C3E50]")}>PDF, Word, TXT</p>
+                            <p className={cn("text-xs font-medium opacity-60", preferences.highContrast ? "text-zinc-200" : "text-[#2C3E50]")}>PDF, Word, TXT</p>
                           </div>
                         </button>
                       </motion.div>
@@ -932,7 +970,7 @@ export default function CogniCareApp() {
                   className={cn(
                     "w-full p-6 pr-20 bg-white rounded-[2rem] border focus:outline-none focus:ring-8 focus:ring-primary/10 text-xl font-medium placeholder:text-[#2C3E50]/30 calm-shadow transition-all duration-500",
                     preferences.highContrast
-                      ? "bg-black border-white border-2 text-white placeholder:text-gray-500 shadow-none"
+                      ? "bg-slate-900 border-slate-800 border text-zinc-200 placeholder:text-gray-500 shadow-none"
                       : "border-white"
                   )}
                   value={input}
@@ -995,8 +1033,8 @@ export default function CogniCareApp() {
                         onClick={() => startFocus(mins)}
                         className={cn(
                           "p-8 rounded-[2rem] border-2 transition-all interactive-element group",
-                          mins === 15 ? "bg-[#E3F2FD] border-blue-200 hover:border-blue-400" :
-                          mins === 25 ? "bg-[#FFF3E0] border-orange-200 hover:border-orange-400" :
+                          mins === 15 ? "bg-[#E3F2FD] border-slate-800 hover:border-blue-400" :
+                          mins === 25 ? "bg-[#FFF3E0] border-slate-800 hover:border-orange-400" :
                           "bg-[#FFFDE7] border-yellow-200 hover:border-yellow-400"
                         )}
                       >
@@ -1008,12 +1046,35 @@ export default function CogniCareApp() {
                 </div>
               ) : (
                 <div className="space-y-12">
-                   <div className="space-y-4">
-                    <div className="p-8 bg-white rounded-full calm-shadow inline-block animate-pulse border border-orange-100">
-                      <Timer className="w-20 h-20 text-secondary" />
-                    </div>
-                    <h2 className="text-5xl font-black text-[#2C3E50] tracking-tight">{formatTime(timeLeft)}</h2>
-                    <p className="text-xl text-foreground/40 italic">Inhala... exhala...</p>
+                   <div className="space-y-4 flex flex-col items-center">
+                    <motion.div 
+                      animate={{ 
+                        scale: [1, 1.8, 1],
+                        opacity: [0.6, 1, 0.6] 
+                      }}
+                      transition={{ 
+                        duration: 8, 
+                        repeat: Infinity, 
+                        ease: "easeInOut" 
+                      }}
+                      style={{
+                        boxShadow: preferences.highContrast ? '0 0 50px rgba(90,158,255,0.4)' : '0 0 50px rgba(165,216,255,0.8)'
+                      }}
+                      className={cn(
+                        "w-32 h-32 rounded-full blur-[2px]",
+                        preferences.highContrast ? "bg-blue-500" : "bg-[#A5D8FF]"
+                      )}
+                    />
+                    <h2 className={cn(
+                      "text-5xl font-black tracking-tight pt-8",
+                      preferences.highContrast ? "text-zinc-200" : "text-[#2C3E50]"
+                    )}>
+                      {formatTime(timeLeft)}
+                    </h2>
+                    <p className={cn(
+                      "text-xl tracking-[0.3em] font-medium",
+                      preferences.highContrast ? "text-blue-400" : "text-[#2C3E50]/60"
+                    )}>INHALA... EXHALA...</p>
                   </div>
 
                   <div className="flex gap-6 justify-center">
@@ -1057,19 +1118,19 @@ export default function CogniCareApp() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className={cn(
                 "fixed top-0 right-0 h-full w-full max-w-sm z-[120] shadow-2xl p-8 overflow-y-auto transition-colors duration-500",
-                preferences.highContrast ? "bg-black text-white border-l-2 border-white" : "bg-white"
+                preferences.highContrast ? "bg-slate-900 text-zinc-200 border-2 border-slate-800" : "bg-slate-900 text-white"
               )}
             >
               <div className="flex justify-between items-center mb-10">
                 <h3 className="text-2xl font-bold flex items-center gap-2">
-                  <Settings className={cn("w-6 h-6", preferences.highContrast ? "text-white" : "text-primary")} />
+                  <Settings className={cn("w-6 h-6", preferences.highContrast ? "text-zinc-200" : "text-primary")} />
                   Preferencias
                 </h3>
                 <button 
                   onClick={() => setSettingsOpen(false)}
                   className={cn(
                     "p-2 rounded-full transition-colors",
-                    preferences.highContrast ? "hover:bg-white/10" : "hover:bg-gray-100"
+                    preferences.highContrast ? "hover:bg-[#1A1A2E]/80" : "hover:bg-gray-100"
                   )}
                 >
                   <X className="w-6 h-6" />
@@ -1079,7 +1140,7 @@ export default function CogniCareApp() {
               <div className="space-y-10">
                 {/* Reading Level */}
                 <div className="space-y-4">
-                  <label className="text-sm font-bold uppercase tracking-wider opacity-60">Nivel de Lectura</label>
+                  <label className={cn("text-sm font-bold uppercase tracking-wider", preferences.highContrast ? "opacity-60" : "opacity-60 text-zinc-300")}>Nivel de Lectura</label>
                   <div className="grid grid-cols-1 gap-2">
                     {[
                       { id: 'simple', label: 'Simple (Bajo)', desc: 'Frases cortas y vocabulario básico. Ideal para reducir la fatiga mental y la sobrecarga.' },
@@ -1092,8 +1153,8 @@ export default function CogniCareApp() {
                         className={cn(
                           "p-5 rounded-2xl text-left border-2 transition-all font-medium flex flex-col gap-2 relative overflow-hidden",
                           preferences.highContrast 
-                            ? (preferences.readingLevel === level.id ? "bg-white text-black border-white" : "bg-black border-white text-white hover:bg-white/10")
-                            : (preferences.readingLevel === level.id ? "bg-primary/10 border-primary text-primary" : "border-border hover:border-primary/30")
+                            ? (preferences.readingLevel === level.id ? "bg-slate-900 text-zinc-200 border-slate-800" : "bg-zinc-950 border-slate-800 text-zinc-200 hover:bg-[#1A1A2E]/80")
+                            : (preferences.readingLevel === level.id ? "bg-primary/10 border-primary text-white" : "border-border hover:border-primary/30 text-white")
                         )}
                       >
                         <div className="flex justify-between items-center">
@@ -1102,7 +1163,7 @@ export default function CogniCareApp() {
                         </div>
                         <span className={cn(
                           "text-xs leading-relaxed",
-                          preferences.highContrast ? "opacity-90 font-medium" : "opacity-70"
+                          preferences.highContrast ? "opacity-90 font-medium" : "opacity-70 text-zinc-300"
                         )}>{level.desc}</span>
                       </button>
                     ))}
@@ -1111,7 +1172,7 @@ export default function CogniCareApp() {
 
                 {/* Tone Level */}
                 <div className="space-y-4">
-                  <label className="text-sm font-bold uppercase tracking-wider opacity-60">Tono de Comunicación</label>
+                  <label className={cn("text-sm font-bold uppercase tracking-wider", preferences.highContrast ? "opacity-60" : "opacity-60 text-zinc-300")}>Tono de Comunicación</label>
                   <div className="grid grid-cols-1 gap-2">
                     {[
                       { id: 'motivador', label: 'Motivador y Entusiasta', desc: 'Mucha energía, emojis positivos y validación constante.' },
@@ -1124,8 +1185,8 @@ export default function CogniCareApp() {
                         className={cn(
                           "p-5 rounded-2xl text-left border-2 transition-all font-medium flex flex-col gap-2 relative overflow-hidden",
                           preferences.highContrast 
-                            ? (preferences.tone === toneOpt.id ? "bg-white text-black border-white" : "bg-black border-white text-white hover:bg-white/10")
-                            : (preferences.tone === toneOpt.id ? "bg-primary/10 border-primary text-primary" : "border-border hover:border-primary/30")
+                            ? (preferences.tone === toneOpt.id ? "bg-slate-900 text-zinc-200 border-slate-800" : "bg-zinc-950 border-slate-800 text-zinc-200 hover:bg-[#1A1A2E]/80")
+                            : (preferences.tone === toneOpt.id ? "bg-primary/10 border-primary text-white" : "border-border hover:border-primary/30 text-white")
                         )}
                       >
                         <div className="flex justify-between items-center">
@@ -1134,7 +1195,7 @@ export default function CogniCareApp() {
                         </div>
                         <span className={cn(
                           "text-xs leading-relaxed",
-                          preferences.highContrast ? "opacity-90 font-medium" : "opacity-70"
+                          preferences.highContrast ? "opacity-90 font-medium" : "opacity-70 text-zinc-300"
                         )}>{toneOpt.desc}</span>
                       </button>
                     ))}
@@ -1145,23 +1206,23 @@ export default function CogniCareApp() {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <p className="font-bold">Contraste Alto</p>
-                      <p className={cn("text-xs", preferences.highContrast ? "text-white/60" : "opacity-50")}>Mejora la visibilidad del texto</p>
+                      <p className={cn("font-bold", preferences.highContrast ? "text-zinc-200" : "text-white")}>Contraste Alto</p>
+                      <p className={cn("text-xs", preferences.highContrast ? "text-zinc-400" : "text-zinc-300")}>Mejora la visibilidad del texto</p>
                     </div>
                     <button 
                       onClick={() => setPreferences(prev => ({ ...prev, highContrast: !prev.highContrast }))}
                       className={cn(
                         "w-14 h-8 rounded-full relative transition-colors",
                         preferences.highContrast 
-                          ? (preferences.highContrast ? "bg-blue-400" : "bg-white/20") 
-                          : (preferences.highContrast ? "bg-primary" : "bg-gray-200")
+                          ? "bg-blue-400"
+                          : "bg-gray-200"
                       )}
                     >
                       <motion.div 
                         animate={{ x: preferences.highContrast ? 24 : 4 }}
                         className={cn(
                           "absolute top-1 left-0 w-6 h-6 rounded-full shadow-md",
-                          preferences.highContrast ? "bg-black" : "bg-white"
+                          preferences.highContrast ? "bg-zinc-950" : "bg-slate-900"
                         )}
                       />
                     </button>
@@ -1169,8 +1230,8 @@ export default function CogniCareApp() {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <p className="font-bold">Apoyo por Voz</p>
-                      <p className={cn("text-xs", preferences.highContrast ? "text-white/60" : "opacity-50")}>Lectura automática de mensajes</p>
+                      <p className={cn("font-bold", preferences.highContrast ? "text-zinc-200" : "text-white")}>Apoyo por Voz</p>
+                      <p className={cn("text-xs", preferences.highContrast ? "text-zinc-400" : "text-zinc-300")}>Lectura automática de mensajes</p>
                     </div>
                     <button 
                       onClick={() => setPreferences(prev => ({ ...prev, textToSpeech: !prev.textToSpeech }))}
@@ -1185,7 +1246,7 @@ export default function CogniCareApp() {
                         animate={{ x: preferences.textToSpeech ? 24 : 4 }}
                         className={cn(
                           "absolute top-1 left-0 w-6 h-6 rounded-full shadow-md",
-                          preferences.highContrast ? "bg-black" : "bg-white"
+                          preferences.highContrast ? "bg-zinc-950" : "bg-slate-900"
                         )}
                       />
                     </button>
@@ -1194,14 +1255,14 @@ export default function CogniCareApp() {
 
                 <div className={cn(
                   "pt-6 border-t mt-4 pb-10",
-                  preferences.highContrast ? "border-white/30" : "border-gray-200"
+                  preferences.highContrast ? "border-slate-800/50" : "border-gray-200"
                 )}>
                   <button 
                     onClick={() => setSettingsOpen(false)}
                     className={cn(
                       "w-full py-4 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 outline-none shadow-lg interactive-element",
                       preferences.highContrast 
-                        ? "bg-white text-black font-black border-2 border-white hover:bg-white/90" 
+                        ? "bg-slate-900 text-zinc-200 font-black border-2 border-white hover:bg-white/90" 
                         : "bg-[#26C782] hover:bg-[#20A86D] text-white border-2 border-[#20A86D]"
                     )}
                   >
@@ -1233,19 +1294,19 @@ export default function CogniCareApp() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className={cn(
                 "fixed top-0 left-0 h-full w-full max-w-sm md:max-w-md z-[120] shadow-2xl p-8 overflow-y-auto transition-colors duration-500",
-                preferences.highContrast ? "bg-black text-white border-r-2 border-white" : "bg-white"
+                preferences.highContrast ? "bg-black text-white border-r-2 border-white" : "bg-slate-900 text-white"
               )}
             >
               <div className="flex justify-between items-center mb-10">
                 <h3 className="text-2xl font-bold flex items-center gap-2">
-                  <History className={cn("w-6 h-6", preferences.highContrast ? "text-white" : "text-primary")} />
+                  <History className={cn("w-6 h-6", preferences.highContrast ? "text-zinc-200" : "text-primary")} />
                   Tus Consultas
                 </h3>
                 <button 
                   onClick={() => setHistoryOpen(false)}
                   className={cn(
                     "p-2 rounded-full transition-colors",
-                    preferences.highContrast ? "hover:bg-white/10" : "hover:bg-gray-100"
+                    preferences.highContrast ? "hover:bg-[#1A1A2E]/80" : "hover:bg-gray-100"
                   )}
                 >
                   <X className="w-6 h-6" />
@@ -1270,13 +1331,13 @@ export default function CogniCareApp() {
                           className={cn(
                             "p-4 rounded-xl text-left border-2 transition-all flex flex-col gap-2 relative overflow-hidden w-full pr-12",
                             preferences.highContrast 
-                              ? (isExpanded ? "bg-white/10 border-white text-white" : "bg-black border-white/50 text-white hover:border-white")
+                              ? (isExpanded ? "bg-slate-900/90 border-slate-800 text-zinc-200" : "bg-black border-white/50 text-white hover:border-white")
                               : (isExpanded ? "bg-primary/5 border-primary text-[#2C3E50]" : "bg-white border-border hover:border-primary/30 text-[#2C3E50]")
                           )}
                         >
                           <div className="flex gap-3 items-start w-full">
-                            <User className={cn("w-5 h-5 shrink-0 mt-0.5", preferences.highContrast ? "text-white" : "text-primary")} />
-                            <p className="font-medium line-clamp-2 md:line-clamp-none leading-snug w-full text-left">"{msg.content}"</p>
+                            <User className={cn("w-5 h-5 shrink-0 mt-0.5", preferences.highContrast ? "text-zinc-200" : "text-primary")} />
+                            <p className="font-medium line-clamp-2 md:line-clamp-none leading-snug w-full text-left">&ldquo;{msg.content}&rdquo;</p>
                           </div>
                         </button>
                         
@@ -1308,7 +1369,7 @@ export default function CogniCareApp() {
                             >
                               <div className={cn(
                                 "p-4 ml-6 mb-2 rounded-xl border calm-shadow whitespace-pre-wrap",
-                                preferences.highContrast ? "bg-black border-white/40 text-white/90" : "bg-gray-50 border-gray-200 text-[#2C3E50]"
+                                preferences.highContrast ? "bg-black border-white/40 text-zinc-200" : "bg-gray-50 border-gray-200 text-[#2C3E50]"
                               )}>
                                 <div className="flex gap-2 items-start mb-2">
                                   <Brain className={cn("w-4 h-4 shrink-0 mt-0.5", preferences.highContrast ? "text-white/70" : "text-gray-400")} />
@@ -1363,7 +1424,7 @@ export default function CogniCareApp() {
               className={cn(
                 "w-full max-w-lg p-8 rounded-[2.5rem] border-2 calm-shadow",
                 preferences.highContrast 
-                  ? "bg-black border-white text-white" 
+                  ? "bg-zinc-950 border-slate-800 text-zinc-200" 
                   : "bg-white border-blue-100"
               )}
               onClick={(e) => e.stopPropagation()}
@@ -1372,9 +1433,9 @@ export default function CogniCareApp() {
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "p-3 rounded-2xl",
-                    preferences.highContrast ? "bg-white/10" : "bg-blue-50"
+                    preferences.highContrast ? "bg-slate-900/90" : "bg-blue-50"
                   )}>
-                    <Brain className={cn("w-6 h-6", preferences.highContrast ? "text-white" : "text-blue-500")} />
+                    <Brain className={cn("w-6 h-6", preferences.highContrast ? "text-zinc-200" : "text-blue-500")} />
                   </div>
                   <h3 className="text-xl font-black">Por qué esta respuesta</h3>
                 </div>
@@ -1388,7 +1449,7 @@ export default function CogniCareApp() {
 
               <div className={cn(
                 "text-lg leading-relaxed space-y-4",
-                preferences.highContrast ? "text-white/90" : "text-gray-700"
+                preferences.highContrast ? "text-zinc-200" : "text-gray-700"
               )}>
                 <ReactMarkdown>
                   {activeExplanation || "Sin explicación disponible."}
@@ -1400,7 +1461,7 @@ export default function CogniCareApp() {
                 className={cn(
                   "w-full mt-8 py-4 rounded-2xl font-black transition-all interactive-element calm-shadow",
                   preferences.highContrast 
-                    ? "bg-white text-black" 
+                    ? "bg-slate-900 text-zinc-200" 
                     : "bg-primary text-white"
                 )}
               >

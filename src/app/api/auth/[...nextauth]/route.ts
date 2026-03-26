@@ -1,28 +1,27 @@
-import NextAuth from "next-auth"
-import AzureADProvider from "next-auth/providers/azure-ad"
-
-interface SessionUser {
-  id?: string;
-  email?: string;
-}
+import NextAuth from "next-auth";
+import AzureADProvider from "next-auth/providers/azure-ad";
+import { NEXTAUTH_SECRET, AZURE_AD_CLIENT_ID, AZURE_AD_CLIENT_SECRET, AZURE_AD_TENANT_ID } from "@/lib/env";
 
 const providers = [];
 
-if (process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET) {
+const clientId = AZURE_AD_CLIENT_ID();
+const clientSecret = AZURE_AD_CLIENT_SECRET();
+
+if (clientId && clientSecret) {
   providers.push(
     AzureADProvider({
-      clientId: process.env.AZURE_AD_CLIENT_ID,
-      clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
-      tenantId: process.env.AZURE_AD_TENANT_ID,
+      clientId,
+      clientSecret,
+      tenantId: AZURE_AD_TENANT_ID(),
     })
   );
 }
 
 const handler = NextAuth({
   providers,
-  secret: process.env.NEXTAUTH_SECRET || "development-secret-not-for-prod",
+  secret: NEXTAUTH_SECRET(),
   pages: {
-    signIn: '/auth/signin',
+    signIn: "/auth/signin",
   },
   session: {
     strategy: "jwt",
@@ -30,7 +29,7 @@ const handler = NextAuth({
   callbacks: {
     async session({ session, token }) {
       if (session.user) {
-        (session.user as SessionUser).id = token.sub;
+        (session.user as { id?: string }).id = token.sub;
       }
       return session;
     },
@@ -39,8 +38,8 @@ const handler = NextAuth({
         token.id = user.id;
       }
       return token;
-    }
+    },
   },
-})
+});
 
-export { handler as GET, handler as POST }
+export { handler as GET, handler as POST };

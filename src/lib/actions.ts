@@ -6,45 +6,50 @@ import {
   getUserHistory as getHistoryFromCosmos,
   saveUserPreferences,
   getUserPreferences,
-  deleteMessage as deleteFromCosmos
+  deleteMessage as deleteFromCosmos,
 } from "./cosmos";
 import type { AgentMessage } from "./ai-agent";
+import { isCosmosConfigured, isAzureAdConfigured } from "./env";
+import { log } from "./log";
 
-/**
- * Server Action to extract text from PDF or Word files.
- * Uses dynamic imports to keep Node-only libraries away from the client bundle.
- */
 export async function extractTextFromFile(base64: string, mimeType: string): Promise<string> {
   const base64Data = base64.split(",")[1] || base64;
   const buffer = Buffer.from(base64Data, "base64");
 
   if (mimeType === "application/pdf") {
     try {
-      // pdf-parse uses a specific export structure that can be tricky in ESM
-      const pdf = require("pdf-parse");
-      const data = await pdf(buffer);
-      return data.text;
+      const { PDFParse } = await import("pdf-parse");
+      const parser = new PDFParse({ data: buffer });
+      const textResult = await parser.getText();
+      log.debug("PDF parseado", { pages: textResult.total, textLength: textResult.text.length });
+      await parser.destroy();
+      return textResult.text;
     } catch (error) {
-      console.error("Error parsing PDF:", error);
+      log.error("Error parseando PDF", { error: (error as Error).message });
       throw new Error("No se pudo leer el archivo PDF.");
     }
-  } else if (
+  }
+
+  if (
     mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
     mimeType === "application/msword"
   ) {
     try {
       const mammoth = await import("mammoth");
       const result = await mammoth.extractRawText({ buffer });
+      log.debug("Documento Word parseado", { textLength: result.value.length });
       return result.value;
     } catch (error) {
-      console.error("Error parsing Word document:", error);
+      log.error("Error parseando Word", { error: (error as Error).message });
       throw new Error("No se pudo leer el archivo de Word.");
     }
-  } else if (mimeType.startsWith("text/")) {
-    return buffer.toString("utf8");
-  } else {
-    throw new Error(`Tipo de archivo no soportado: ${mimeType}`);
   }
+
+  if (mimeType.startsWith("text/")) {
+    return buffer.toString("utf8");
+  }
+
+  throw new Error(`Tipo de archivo no soportado: ${mimeType}`);
 }
 
 interface UserPreferences {
@@ -56,107 +61,85 @@ interface UserPreferences {
 
 interface SessionUser {
   id?: string;
-  email?: string;
+  email?: string | null;
 }
 
-/**
- * Server Action to persist a single message to Cosmos DB.
- * It automatically identifies the user from the current session.
- */
+interface Session {
+  user?: SessionUser;
+}
+
+function getSessionUserId(session: Session | null): string | null {
+  return session?.user?.id || session?.user?.email || null;
+}
+
 export async function persistMessage(message: AgentMessage) {
+  if (!isCosmosConfigured()) return null;
+
   try {
-    if (!process.env.AZURE_COSMOS_ENDPOINT || !process.env.AZURE_COSMOS_KEY) return;
-
     const session = await getServerSession();
-    if (!session?.user?.email) return null;
-
-    const user = session.user as SessionUser;
-    const userId = user.id || session.user.email;
+    const userId = getSessionUserId(session);
+    if (!userId) return null;
     return await saveToCosmos(userId, message);
   } catch (error) {
-    console.error("Action error persisting message:", error);
+    log.error("Error persistiendo mensaje", { error: (error as Error).message });
     return null;
   }
 }
 
 export async function deleteUserMessageLog(messageId: string) {
+  if (!isCosmosConfigured()) return;
+
   try {
-    if (!process.env.AZURE_COSMOS_ENDPOINT || !process.env.AZURE_COSMOS_KEY) return;
     const session = await getServerSession();
-    if (!session?.user?.email) return;
-    
-    const user = session.user as SessionUser;
-    const userId = user.id || session.user.email;
-    
+    const userId = getSessionUserId(session);
+    if (!userId) return;
     await deleteFromCosmos(userId, messageId);
   } catch (error) {
-    console.error("Action error deleting message:", error);
+    log.error("Error eliminando mensaje", { error: (error as Error).message });
   }
 }
 
-/**
- * Server Action to fetch the latest chat history for the logged-in user.
- */
 export async function fetchUserHistory() {
+  if (!isCosmosConfigured()) return [];
+
   try {
-    if (!process.env.AZURE_COSMOS_ENDPOINT || !process.env.AZURE_COSMOS_KEY) return [];
-
     const session = await getServerSession();
-    if (!session?.user?.email) return [];
-
-    const user = session.user as SessionUser;
-    const userId = user.id || session.user.email;
+    const userId = getSessionUserId(session);
+    if (!userId) return [];
     return await getHistoryFromCosmos(userId);
   } catch (error) {
-    console.error("Action error fetching history:", error);
+    log.error("Error obteniendo historial", { error: (error as Error).message });
     return [];
   }
 }
 
-/**
- * Server Action to sync user preferences to the database.
- */
 export async function persistPreferences(preferences: UserPreferences) {
+  if (!isCosmosConfigured()) return;
+
   try {
-    if (!process.env.AZURE_COSMOS_ENDPOINT || !process.env.AZURE_COSMOS_KEY) return;
-
     const session = await getServerSession();
-    if (!session?.user?.email) return;
-
-    const user = session.user as SessionUser;
-    const userId = user.id || session.user.email;
+    const userId = getSessionUserId(session);
+    if (!userId) return;
     await saveUserPreferences(userId, preferences);
   } catch (error) {
-    console.error("Action error persisting preferences:", error);
+    log.error("Error persistiendo preferencias", { error: (error as Error).message });
   }
 }
 
-/**
- * Server Action to load user preferences on app startup.
- */
 export async function fetchUserPreferences() {
+  if (!isCosmosConfigured()) return null;
+
   try {
-    if (!process.env.AZURE_COSMOS_ENDPOINT || !process.env.AZURE_COSMOS_KEY) return null;
-
     const session = await getServerSession();
-    if (!session?.user?.email) return null;
-
-    const user = session.user as SessionUser;
-    const userId = user.id || session.user.email;
+    const userId = getSessionUserId(session);
+    if (!userId) return null;
     return await getUserPreferences(userId);
   } catch (error) {
-    console.error("Action error fetching preferences:", error);
+    log.error("Error obteniendo preferencias", { error: (error as Error).message });
     return null;
   }
 }
 
-/**
- * Checks if the required Azure AD environment variables are configured.
- */
 export async function isAzureConfigured() {
-  return !!(
-    process.env.AZURE_AD_CLIENT_ID &&
-    process.env.AZURE_AD_CLIENT_SECRET &&
-    process.env.AZURE_AD_TENANT_ID
-  );
+  return isAzureAdConfigured();
 }
