@@ -57,7 +57,7 @@ Al completarse todas las dependencias de una tarjeta de pasos interactiva, se pr
 La arquitectura frontend debe prevenir cambios repentinos de UI. Utiliza renderizado con estado diferido y animaciones de resorte fluidas de `Framer Motion`.
 
 - **RNF-02 (Disponibilidad y Latencia):** 
-Tiempos de inferencia optimizados al invocar modelos eficientes (Phi-4) a través del endpoint unificado de Azure AI Foundry.
+Tiempos de inferencia optimizados al invocar modelos eficientes (Phi-4) a través del endpoint unificado de Azure AI Foundry. La arquitectura gestiona activamente la latencia de red de Azure para prevenir timeouts de 65s mediante el uso de tokens Bearer y gestión optimizada de contextos.
 
 - **RNF-03 (Tolerancia a Fallos Multimodal):** 
 Si los servicios en la nube (AI Document Intelligence) sufren `timeouts`, el sistema aplica mecanismos de retries (backoff/polling) y delega tareas ligeras a extractores de texto nativos de JS (`mammoth`, `pdf-parse`).
@@ -127,7 +127,7 @@ El ecosistema completo está diseñado para despliegues orquestados (Ej: Azure C
 
 ---
 
-## 5. Diagramas de Arquitectura (Mermaid)
+## 5. Diagramas de Arquitectura 
 
 ### 5.1. Arquitectura de Componentes (C4 Nivel 2: Containers)
 Este diagrama describe cómo interactúan los servicios Serverless de Next.js con la capa nativa de Azure en la nube.
@@ -182,6 +182,7 @@ graph TD
 ```
 
 ### 5.2. Flujo de Secuencia: Ingesta Semántica y Respuesta del Agente
+
 Un reto técnico resuelto en el proyecto es lograr que la inteligencia artificial responda siempre con un contexto útil (sin repeticiones) respetando la gramática en lenguaje español, mediante mitigación exhaustiva en la configuración de "penalties".
 
 ```mermaid
@@ -221,6 +222,7 @@ sequenceDiagram
 ```
 
 ### 5.3. Flujo de Secuencia: Análisis Viso-Cognitivo de Imágenes
+
 Cuando el usuario adjunta una fotografía, esquema o captura de pantalla (ej. foto de una pizarra o apuntes en papel), el sistema redirige la extracción a **Azure AI Vision** para obtener el texto y un título descriptivo antes de enviarlo al razonamiento conversacional:
 
 ```mermaid
@@ -262,7 +264,7 @@ En `src/lib/ai-agent.ts`, se eliminaron configuraciones nocivas como un valor su
 
 - **Por qué:** El idioma español depende intensamente de las conjunciones (el, la, por, para, que). Si la API de Azure AI Foundry fuerza parámetros de penalidad en alta intensidad, el modelo colapsa porque no sabe cómo estructurar sintaxis sin re-usar esas mismas preposiciones, produciendo respuestas ilegibles como *"Aplica del la enc el con el"* en los objetos JSON.
 
-- **La solución actual:** Se implementan rangos de temperatura optimizados (`temperature=0.2`) junto con `top_p=0.95`, produciendo cadenas determinísticas y perfectas sin romper la gramática.
+- **La solución actual:** Se implementan rangos de temperatura optimizados (`temperature=0.7`) para mayor fluidez empática, con guardarraíles estrictos en el parsing de etiquetas para asegurar que el JSON sea siempre válido incluso en contextos pesados de hasta 12,000 caracteres.
 
 ### 6.2. Arquitectura de Prompts Obligatoria (Format Guardrails)
 La estructura del sistema prohíbe el metatexto conversacional o "Meta-talk" indeseado (*"Claro, aquí tienes tu proceso..."*). La directriz actual sobre el modelo `Phi-4` exige el uso riguroso de `Markdown Headers`:
@@ -271,6 +273,11 @@ La estructura del sistema prohíbe el metatexto conversacional o "Meta-talk" ind
 2. `### Te explico de manera sencilla`: Adaptado vía prompt (basado en Cosmos DB) al *reading_level* del usuario.
 3. `[JSON_START]`: Nodo que inyecta tareas procesables para el gestor reactivo del Frontend.
 4. `[EXPLICACION_START]`: Justificación neurolingüística del modelo al momento de elegir el tono. Esta variable no se pinta en pantalla, sino que abre el Modal Popup *"Explicar Respuesta"* de la UI.
+
+### 6.3. Estabilización de Conectividad (Azure MaaS)
+Tras auditoría técnica, la conectividad se ha blindado mediante:
+1.  **Bearer Authentication**: Inyección de encabezado `Authorization: Bearer` junto a `api-key` para asegurar el paso a través de los diversos API Gateways de Azure Foundry.
+2.  **Modulación vs Monolito**: El sistema delega la lógica de negocio a la carpeta `src/lib`, manteniendo las rutas de la API limpias y reduciendo la deuda técnica de red.
 
 ---
 

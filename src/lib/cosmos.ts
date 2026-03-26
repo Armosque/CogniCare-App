@@ -43,7 +43,8 @@ async function getContainer(containerId: string) {
 export async function saveMessage(userId: string, message: AgentMessage) {
   try {
     const container = await getContainer("Messages");
-    const { resource } = await container.items.create({
+    // Usamos upsert para evitar el error 409 si el mismo mensaje se guarda dos veces
+    const { resource } = await container.items.upsert({
       ...message,
       userId,
       timestamp: new Date().toISOString(),

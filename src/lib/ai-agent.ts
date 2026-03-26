@@ -22,71 +22,73 @@ interface StepItem {
 
 function buildReadingLevelInstructions(level: string): string {
   const map: Record<string, string> = {
-    simple: "Usa palabras muy básicas, frases cortas de máximo 10 o 15 palabras. Evita totalmente tecnicismos, modismos complejos o metáforas.",
-    intermedio: "Usa un lenguaje claro y directo, para uso general, sin jerga excesiva.",
-    avanzado: "Usa lenguaje estándar, fluido y detallado, incorporando términos técnicos si es apropiado.",
+    simple: "Usa palabras muy básicas, frases cortas. Evita tecnicismos.",
+    intermedio: "Usa un lenguaje claro y directo para uso general.",
+    avanzado: "Usa lenguaje estándar, fluido y detallado.",
   };
   return map[level] ?? map.simple;
 }
 
 function buildToneInstructions(tone: string): string {
   const map: Record<string, string> = {
-    motivador: "Sé extremadamente entusiasta y elogia el esfuerzo del usuario con palabras de apoyo.",
-    directo: "Sé muy conciso, lógico, y al grano. Evita adornos innecesarios. No uses emojis emocionales y enfócate únicamente en resolver la solicitud.",
-    empatico: "Sé muy empático, tranquilo, paciente, comprensivo y utiliza un tono relajante, validando los sentimientos del usuario.",
+    motivador: "Sé entusiasta y elogia el esfuerzo del usuario.",
+    directo: "Sé muy conciso y al grano. Evita adornos.",
+    empatico: "Sé compasivo y paciente con el usuario.",
   };
   return map[tone] ?? map.motivador;
 }
 
 function buildSystemPrompt(readingLevel: string, tone: string): string {
-  return `
-Eres CogniCare, un asistente diseñado estrictamente para reducir la carga cognitiva de personas neurodiversas (TDAH, Autismo, Dislexia).
+  const levelInstr = buildReadingLevelInstructions(readingLevel);
+  const toneInstr = buildToneInstructions(tone);
+  
+  return `ERES COGNICARE, UN ASISTENTE AMABLE Y FACILITADOR DE CONOCIMIENTO, ESPECIALIZADO EN NEURODIVERSIDAD (TDAH, TEA, DISLEXIA).
+TU OBJETIVO PRINCIPAL ES AYUDAR AL USUARIO A APRENDER Y PROCESAR INFORMACIÓN COMPLEJA PROVENIENTE DE SUS PREGUNTAS, DOCUMENTOS O IMÁGENES.
 
-REGLA DE IDIOMA - CRÍTICA:
-1. Detecta el idioma del mensaje del usuario.
-2. DEBES RESPONDER COMPLETAMENTE EN ESE MISMO IDIOMA.
+REGLAS ESTRICTAS:
+1. IDIOMA DE SALIDA: Español nativo. Los documentos de entrada pueden estar en inglés u otros idiomas; compréndelos y da siempre tu respuesta en español.
+2. NUNCA uses emojis ni negritas excesivas.
+3. ESTILO: ${levelInstr}
+4. TONO: ${toneInstr}
+5. NUNCA hables en tercera persona (no digas "El usuario quiere..."). Respóndele directamente al usuario.
 
-INSTRUCCIONES DE ESTILO:
-- Nivel de lectura: ${buildReadingLevelInstructions(readingLevel)}
-- Tono: ${buildToneInstructions(tone)}
-- REGLAS IMPORTANTES: NO USES EMOJIS bajo ninguna circunstancia. NO uses corchetes, etiquetas ni encabezados escritos en mayúsculas para tu texto principal.
+DEBES DIVIDIR TU RESPUESTA EN ESTAS 3 PARTES EXACTAS, USANDO MARKDOWN:
 
-Tu respuesta debe componerse de estas partes en orden:
+### SÍNTESIS
+Realiza una síntesis muy clara y directa de tu respuesta al usuario (o del documento si lo hay).
 
-1. MENSAJE PRINCIPAL (Texto libre natural):
-Conversa directamente con el usuario. Comienza con un saludo empático, dale un brevísimo resumen de lo que vas a explicar (1-2 frases) y luego dale la explicación detallada pero fácil de leer. ¡Haz que suene fluido y muy humano!
+### EXPLICACIÓN
+Explica de manera sencilla y digerible la respuesta, usando un lenguaje amable que reduzca la carga cognitiva.
 
-2. PASOS (BLOQUE JSON) - OBLIGATORIO SI HAY TAREAS:
-Si el tema implica una tarea o proceso a seguir, NO escribas los pasos en tu texto principal. En su lugar, incluye al final EXACTAMENTE este bloque JSON:
-[JSON_START]
+### TAREAS
+Crea pasos accionables útiles. DEBES usar este esquema JSON exacto para devolver las tareas. 
+
+\`\`\`json
 {
   "type": "task-list",
   "steps": [
-    { "title": "Paso 1", "bullets": ["detalle"], "duration": "5 min" }
+    { 
+      "title": "Título descriptivo de la acción", 
+      "bullets": ["Acción específica 1"], 
+      "duration": "5 min" 
+    }
   ]
 }
-[JSON_END]
-
-3. JUSTIFICACIÓN SECRETA (OBLIGATORIO):
-Al final de todo el mensaje, debes incluir por qué elegiste darle esta respuesta al usuario, encerrado exactamente en estas etiquetas:
-[EXPLICACION_START]
-(Tu breve justificación)
-[EXPLICACION_END]
-  `;
+\`\`\``;
 }
 
 function buildContextHistory(history: AgentMessage[]) {
   const lastImageIndex = history.findLastIndex((m) => m.image);
 
-  return history
-    .map((msg, idx) => {
+  return history.map((msg, idx) => {
       const truncatedDoc = msg.documentText
-        ? msg.documentText.slice(0, 12000) + (msg.documentText.length > 12000 ? "... [Truncado por brevedad]" : "")
+        ? msg.documentText.slice(0, 4000) + (msg.documentText.length > 4000 ? "..." : "")
         : "";
 
-      const combinedContent = msg.documentText
-        ? `[SOURCE DOCUMENT (RESUMIDO)]:\n${truncatedDoc}\n\n[USER QUERY]:\n${msg.content}`
-        : msg.content;
+      let combinedContent = msg.content;
+      if (msg.documentText) {
+        combinedContent = `[DOCUMENTO ADJUNTO]:\n${truncatedDoc}\n\n[MENSAJE DEL USUARIO]:\n${msg.content}`;
+      }
 
       if (msg.image && msg.role === "user" && idx === lastImageIndex) {
         return {
@@ -97,183 +99,97 @@ function buildContextHistory(history: AgentMessage[]) {
           ],
         };
       }
-
       return { role: msg.role, content: combinedContent };
-    })
-    .slice(-6);
+    }).slice(-3);
 }
 
-function buildUrl(endpoint: string, deploymentId: string, apiVersion: string): string {
-  let url = endpoint.trim();
-  if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    url = `https://${url}`;
-  }
-
-  // Si el endpoint ya incluye todo el path (como en AI Foundry), úsalo tal cual o asegúrate de que tenga api-version
-  if (url.includes("/chat/completions")) {
-    if (!url.includes("api-version=") && apiVersion) {
-      return url.includes("?") ? `${url}&api-version=${apiVersion}` : `${url}?api-version=${apiVersion}`;
-    }
-    return url;
-  }
-
-  // Azure OpenAI Standard
-  if (url.includes("openai.azure.com")) {
-    return `${url.replace(/\/$/, "")}/openai/deployments/${deploymentId}/chat/completions?api-version=${apiVersion}`;
-  }
-
-  // Fallback estándar
-  return `${url.replace(/\/$/, "")}/v1/chat/completions`;
-}
-
-function extractJsonFromContent(content: string): { jsonPart: string; extractedContent: string } {
-  const explicitRegex = /\[JSON[_\s](?:START|INICIO|BEGIN)\]\s*(?:```json)?([\s\S]*?)(?:```)?\s*\[JSON[_\s](?:END|FIN|TERMINO|ENLACE)\]/i;
-  const mdRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/i;
-
-  const explicitMatch = content.match(explicitRegex);
-  if (explicitMatch) {
-    return { jsonPart: explicitMatch[1].trim(), extractedContent: content.replace(explicitRegex, "").trim() };
-  }
-
-  const mdMatch = content.match(mdRegex);
+function extractJsonFromContent(content: string) {
+  const mdMatch = content.match(/```json\s*([\s\S]*?)\s*```/i);
   if (mdMatch) {
-    const jsonStr = mdMatch[1].trim();
-    if (jsonStr.includes('"steps"')) {
-      return { jsonPart: jsonStr, extractedContent: content.replace(mdMatch[0], "").trim() };
-    }
+    return { jsonPart: mdMatch[1].trim(), extractedContent: content.replace(mdMatch[0], "").trim() };
   }
-
-  const start = content.indexOf("{");
-  const end = content.lastIndexOf("}");
-  if (start !== -1 && end !== -1 && end > start && content.includes('"steps"')) {
-    const jsonPart = content.substring(start, end + 1);
-    // Verificamos que sea un JSON razonablemente válido antes de mutilar el contenido
-    if (jsonPart.includes('"type"') || jsonPart.includes('"title"')) {
-       return { jsonPart, extractedContent: content.replace(jsonPart, "").trim() };
-    }
+  const regex = /###\s*TAREAS\s*([\s\S]*)/i;
+  const match = content.match(regex);
+  if (match) {
+    let rawJson = match[1].trim();
+    if (rawJson.startsWith('```json')) rawJson = rawJson.slice(7).trim();
+    if (rawJson.startsWith('```')) rawJson = rawJson.slice(3).trim();
+    if (rawJson.endsWith('```')) rawJson = rawJson.slice(0, -3).trim();
+    return { jsonPart: rawJson, extractedContent: content.replace(match[0], "").trim() };
   }
-
   return { jsonPart: "", extractedContent: content };
 }
 
-function extractExplanation(content: string): { explanation: string; cleanedContent: string } {
-  const explanationRegex = /\[EXPLICACI[ÓO]N[_\s](?:START|INICIO|BEGIN)\]\s*([\s\S]*?)\s*\[EXPLICACI[ÓO]N[_\s](?:END|ENLACE|FIN|TERMINO)\]/i;
-  const match = content.match(explanationRegex);
+function extractExplanation(content: string) {
+  const regex = /###\s*EXPLICACI[OÓ]N\s*([\s\S]*?)(?:###|$)/i;
+  const match = content.match(regex);
   if (match) {
-    return {
-      explanation: match[1].trim(),
-      cleanedContent: content.replace(explanationRegex, "").trim(),
-    };
+    return { explanation: match[1].trim(), cleanedContent: content.replace(match[0], "").trim() };
   }
   return { explanation: "", cleanedContent: content };
 }
 
-function cleanFinalContent(raw: string, explanationRegex: RegExp): string {
-  let clean = raw
-    .replace(explanationRegex, "")
-    .replace(/\[(?:JSON|EXPLICACION|EXPLICACI[ÓO]N)[_\s](?:START|END|INICIO|FIN|TERMINO|BEGIN)\]/gi, "")
-    .replace(/```json/gi, "")
-    .replace(/```/g, "")
-    .trim();
-
-  // Anti-hallucination: strip preamble before mandatory markers
-  const startMarkers = ["Explicación detallada:", "Síntesis del tema:", "Síntesis del tema", "Explicación detallada"];
-  let firstMarkerIdx = -1;
-  for (const marker of startMarkers) {
-    const idx = clean.indexOf(marker);
-    if (idx !== -1 && (firstMarkerIdx === -1 || idx < firstMarkerIdx)) {
-      firstMarkerIdx = idx;
-    }
-  }
-  if (firstMarkerIdx > 0 && firstMarkerIdx < 600) {
-    clean = clean.substring(firstMarkerIdx);
-  }
-
-  // Strip accidental wrapping brackets
-  if (clean.startsWith("[") && clean.endsWith("]") && !clean.includes("\n")) {
-    clean = clean.substring(1, clean.length - 1).trim();
-  }
-  if (clean === "[" || clean === "]") clean = "";
-
-  return clean;
-}
-
-function buildTextOnlyHistory(history: AgentMessage[]) {
-  return history
-    .map((msg) => {
-      const truncatedDoc = msg.documentText
-        ? msg.documentText.slice(0, 12000) + (msg.documentText.length > 12000 ? "... [Truncado por brevedad]" : "")
-        : "";
-
-      const combinedContent = msg.documentText
-        ? `[SOURCE DOCUMENT (RESUMIDO)]:\n${truncatedDoc}\n\n[USER QUERY]:\n${msg.content}`
-        : msg.content;
-
-      return { role: msg.role, content: combinedContent };
-    })
-    .slice(-6);
-}
-
-function hasImageInHistory(history: AgentMessage[]): boolean {
-  return history.some((m) => m.image);
-}
-
 function parseAgentResponse(rawContent: string) {
-  const explanationRegex = /\[EXPLICACI[ÓO]N[_\s](?:START|INICIO|BEGIN)\]\s*([\s\S]*?)\s*\[EXPLICACI[ÓO]N[_\s](?:END|ENLACE|FIN|TERMINO)\]/i;
-
+  log.info("AI RAW:", { snippet: rawContent.slice(0, 100) });
   const { jsonPart, extractedContent } = extractJsonFromContent(rawContent);
   const { explanation, cleanedContent } = extractExplanation(extractedContent);
 
   let type: "text" | "task-list" | "summary" = "text";
-  let steps: StepItem[] = [];
-  let cleanContent = cleanedContent;
+  let steps = [];
 
   if (jsonPart) {
     try {
       const parsed = JSON.parse(jsonPart);
-      if (parsed.steps && Array.isArray(parsed.steps)) {
+      if (parsed.steps) {
         type = "task-list";
         steps = parsed.steps;
       }
     } catch {
-      log.warn("Error al parsear JSON de steps de AI");
+      log.warn("JSON error");
     }
   }
 
-  cleanContent = cleanFinalContent(cleanContent, explanationRegex);
+  let finalContent = cleanedContent
+    .replace(/###\s*(S[IÍ]NTESIS|EXPLICACI[OÓ]N|TAREAS)/gi, "")
+    .replace(/```json[\s\S]*?```/gi, "")
+    .trim();
+
+  if (!finalContent && extractedContent.length > 5) {
+    finalContent = extractedContent.replace(/```json[\s\S]*?```/gi, "").replace(/###\s*(S[IÍ]NTESIS|EXPLICACI[OÓ]N|TAREAS)/gi, "").trim();
+  }
 
   return {
     role: "assistant" as const,
-    content: (cleanContent || "He aquí los pasos para tu tarea:").trim(),
+    content: finalContent || "He analizado tu solicitud:",
     type,
     steps: steps.length > 0 ? steps : undefined,
     explanation: explanation || undefined,
   };
 }
 
-async function callApi(url: string, agentKey: string, messages: unknown[]) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 segundos
 
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "api-key": agentKey,
-      },
-      body: JSON.stringify({
-        model: AZURE_AI_DEPLOYMENT_NAME(),
-        messages,
-        temperature: 0.7,
-        max_tokens: 1500,
-      }),
-      signal: controller.signal as any,
-    });
-    return response;
-  } finally {
-    clearTimeout(timeoutId);
+async function callApi(url: string, agentKey: string, deploymentId: string, bodyJson: any) {
+  log.warn(`[CogniCare] Llamando a endpoint: ${url.split('?')[0]}`);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "api-key": agentKey },
+    body: JSON.stringify(bodyJson),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    log.error(`[CogniCare] Error de Azure (${response.status}):`, { detail: errorText.slice(0, 100) });
+    throw new Error(`Err ${response.status}`);
   }
+
+  return response;
+}
+
+function mask(str: string | undefined) {
+  if (!str) return "N/D";
+  if (str.length < 10) return "****";
+  return `${str.slice(0, 4)}...${str.slice(-4)}`;
 }
 
 export async function processWithAgent(
@@ -281,76 +197,37 @@ export async function processWithAgent(
   readingLevel: string = "simple",
   tone: string = "motivador"
 ): Promise<AgentMessage> {
-  const agentKey = AZURE_AI_AGENT_KEY();
+  const key = AZURE_AI_AGENT_KEY();
   const endpoint = AZURE_AI_AGENT_ENDPOINT();
-  const deploymentId = AZURE_AI_DEPLOYMENT_NAME();
-  const apiVersion = AZURE_AI_API_VERSION();
+  const deployment = AZURE_AI_DEPLOYMENT_NAME();
+  const version = AZURE_AI_API_VERSION();
   const systemPrompt = buildSystemPrompt(readingLevel, tone);
-  const url = buildUrl(endpoint, deploymentId, apiVersion);
 
-  log.info("Llamando a AI Agent", { url: url.replace(agentKey, "***"), historyLength: history.length });
+  log.warn("--- [CogniCare] Configuración Activa ---");
+  log.warn(`URL: ${endpoint.split('?')[0]}`);
+  log.warn(`Modelo: ${deployment}`);
+  log.warn(`API Key: ${mask(key)}`);
+  log.warn("---------------------------------------");
 
   try {
-    // Primer intento: con imagen (multimodal)
-    const contextWithImage = buildContextHistory(history);
-    let response = await callApi(url, agentKey, [
-      { role: "system", content: systemPrompt },
-      ...contextWithImage,
-    ]);
+    const messages = buildContextHistory(history) as any[];
+    messages.unshift({ role: "system", content: systemPrompt });
 
-    // Si la API rechaza la imagen, reintentar con solo texto (OCR ya extrajo el contenido)
-    if (!response.ok) {
-      let errBody = "";
-      try {
-        errBody = JSON.stringify(await response.json());
-      } catch {
-        errBody = response.statusText;
-      }
+    const body = {
+      model: deployment,
+      messages,
+      temperature: 0.3, // Temperatura balanceada para seguir instrucciones sin delirar
+      max_tokens: 2000
+    };
 
-      const imageUnsupported =
-        errBody.toLowerCase().includes("image") ||
-        errBody.toLowerCase().includes("clipboard") ||
-        errBody.toLowerCase().includes("multimodal");
-
-      if (imageUnsupported && hasImageInHistory(history)) {
-        log.warn("Endpoint no soporta imagen, reintentando con texto OCR solamente");
-        const textOnlyHistory = buildTextOnlyHistory(history);
-        response = await callApi(url, agentKey, [
-          { role: "system", content: systemPrompt },
-          ...textOnlyHistory,
-        ]);
-      }
-
-      if (!response.ok) {
-        let retryErr = "";
-        try {
-          retryErr = JSON.stringify(await response.json());
-        } catch {
-          retryErr = response.statusText;
-        }
-        log.error("Error de Azure AI API", { status: response.status, details: retryErr });
-        throw new Error(`Azure API Error (${response.status}): ${retryErr}`);
-      }
-    }
-
-    const data = await response.json();
-    const choice = data.choices && data.choices[0] ? data.choices[0] : {};
-    const content = (choice.message && choice.message.content) ? choice.message.content : "";
-
-    log.debug("Raw AI Response", { 
-      contentLength: content.length,
-      contentSnippet: content.slice(0, 500),
-      finishReason: choice.finish_reason,
-      usage: data.usage
-    });
-    
-    log.info("Respuesta de AI procesada");
-    return parseAgentResponse(content);
+    const res = await callApi(endpoint, key, deployment, body);
+    const data = await res.json();
+    return parseAgentResponse(data.choices?.[0]?.message?.content || "");
   } catch (error) {
-    log.error("Error en processWithAgent", { error: (error as Error).message });
+    log.error("Final catch en processWithAgent:", { msg: (error as Error).message });
     return {
       role: "assistant",
-      content: `Lo siento, tuve un problema al conectar con mi cerebro artificial. ¿Podrías intentar de nuevo?`,
+      content: "Lo siento, tuve un problema al conectar con mi cerebro artificial. ¿Podrías intentar de nuevo?",
       type: "text",
     };
   }

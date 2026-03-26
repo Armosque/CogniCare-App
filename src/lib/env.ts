@@ -19,7 +19,7 @@ function optional(key: string, fallback?: string): string | undefined {
 export const AZURE_AI_AGENT_KEY = required.bind(null, "AZURE_AI_AGENT_KEY");
 export const AZURE_AI_AGENT_ENDPOINT = required.bind(null, "AZURE_AI_AGENT_ENDPOINT");
 export const AZURE_AI_DEPLOYMENT_NAME = () => optional("AZURE_AI_DEPLOYMENT_NAME", "Phi-4-multimodal-instruct")!;
-export const AZURE_AI_API_VERSION = () => optional("AZURE_AI_API_VERSION", "2024-02-15-preview")!;
+export const AZURE_AI_API_VERSION = () => optional("AZURE_AI_API_VERSION", "2024-05-01-preview")!;
 
 // --- Azure Document Intelligence / Vision OCR ---
 export const AZURE_DOC_INTEL_ENDPOINT = required.bind(null, "AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT");

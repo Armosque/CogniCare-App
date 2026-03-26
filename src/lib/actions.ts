@@ -9,6 +9,7 @@ import {
   deleteMessage as deleteFromCosmos,
 } from "./cosmos";
 import type { AgentMessage } from "./ai-agent";
+import { processWithAgent } from "./ai-agent";
 import { isCosmosConfigured, isAzureAdConfigured } from "./env";
 import { log } from "./log";
 
@@ -142,4 +143,17 @@ export async function fetchUserPreferences() {
 
 export async function isAzureConfigured() {
   return isAzureAdConfigured();
+}
+
+export async function callAgentAction(
+  history: AgentMessage[],
+  readingLevel: string = "simple",
+  tone: string = "motivador"
+) {
+  try {
+    return await processWithAgent(history, readingLevel, tone);
+  } catch (error) {
+    log.error("Error en callAgentAction", { error: (error as Error).message });
+    throw error;
+  }
 }

@@ -73,7 +73,7 @@ export async function analyzeComplexDocument(base64Data: string, mimeType: strin
     const initialResponse = await client.path("/documentModels/{modelId}:analyze", modelId).post({
       contentType: "application/octet-stream",
       body: buffer,
-      queryParameters: { locale: "es", features: ["formulas", "styleFont"] },
+      queryParameters: { features: ["formulas", "styleFont"] },
     });
 
     if (isUnexpected(initialResponse)) {

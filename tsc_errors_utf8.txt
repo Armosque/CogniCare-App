@@ -1,0 +1,4 @@
+﻿src/hooks/useChat.ts(217,21): error TS1127: Invalid character.
+src/hooks/useChat.ts(217,22): error TS1134: Variable declaration expected.
+src/hooks/useChat.ts(299,1): error TS1005: '}' expected.
+src/hooks/useChat.ts(299,1): error TS1160: Unterminated template literal.
