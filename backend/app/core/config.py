@@ -44,9 +44,22 @@ class Settings:
         self.API_VERSION = "v1"
         self.FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
+        # Authentication & JWT
+        self.secret_key = os.getenv(
+            "JWT_SECRET_KEY",
+            "development-secret-key-change-in-production"
+        )
+        self.access_token_expire_minutes = int(
+            os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
+        )
+        self.refresh_token_expire_days = int(
+            os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7")
+        )
+
         # Containers
         self.MESSAGES_CONTAINER = "messages"
         self.PREFERENCES_CONTAINER = "preferences"
+        self.USERS_CONTAINER = "users"
 
     @property
     def is_debug(self) -> bool:
@@ -63,3 +76,7 @@ class Settings:
 def get_settings() -> Settings:
     """Get application settings (cached)"""
     return Settings()
+
+
+# Module-level settings instance for direct import
+settings = get_settings()

@@ -26,7 +26,8 @@ def setup_middleware(app: FastAPI) -> None:
         allow_origins=_get_cors_origins(settings),
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
+        allow_headers=["*"],  # Allow all headers including Authorization
+        expose_headers=["Authorization"],  # Expose auth headers to client
     )
 
 

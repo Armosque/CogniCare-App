@@ -12,13 +12,24 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://backend:8000}
       - NODE_ENV=${NODE_ENV:-development}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - AZURE_AD_CLIENT_ID=${AZURE_AD_CLIENT_ID}
+      - AZURE_AD_CLIENT_SECRET=${AZURE_AD_CLIENT_SECRET}
+      - AZURE_AD_TENANT_ID=${AZURE_AD_TENANT_ID}
     depends_on:
       - backend
     networks:
       - cognicare-network
     restart: unless-stopped
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/package.json:/app/package.json
+      - /app/node_modules
+    command: npm run dev
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/_next/static"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -33,7 +44,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - BACKEND_DEBUG=${BACKEND_DEBUG:-false}
+      - BACKEND_DEBUG=${BACKEND_DEBUG:-true}
       - BACKEND_PORT=8000
       - AZURE_COSMOS_ENDPOINT=${AZURE_COSMOS_ENDPOINT}
       - AZURE_COSMOS_KEY=${AZURE_COSMOS_KEY}
@@ -52,6 +63,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=5)"]
       interval: 30s

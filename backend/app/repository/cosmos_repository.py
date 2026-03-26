@@ -1,8 +1,9 @@
-"""Cosmos DB repository implementation"""
+"""Cosmos DB async repository implementation"""
 
 import logging
 from typing import Any, Dict, List, Optional
 
+from azure.cosmos.aio import ContainerProxy
 from azure.cosmos import exceptions
 
 from app.core.exceptions import EntityNotFoundError, RepositoryError
@@ -12,14 +13,14 @@ logger = logging.getLogger(__name__)
 
 
 class CosmosRepository(IBaseRepository):
-    """Cosmos DB implementation of IBaseRepository"""
+    """Async Cosmos DB implementation of IBaseRepository"""
 
-    def __init__(self, container: Any):
+    def __init__(self, container: ContainerProxy):
         """
-        Initialize Cosmos repository
+        Initialize async Cosmos repository
         
         Args:
-            container: Azure Cosmos DB container instance
+            container: Async Azure Cosmos DB container instance
         """
         self.container = container
 
@@ -27,7 +28,7 @@ class CosmosRepository(IBaseRepository):
         """Create a new item in Cosmos DB"""
         try:
             logger.info(f"Creating item: {item.get('id')}")
-            created_item = self.container.create_item(item)
+            created_item = await self.container.create_item(item)
             return created_item
         except exceptions.CosmosResourceExistsError:
             raise RepositoryError(f"Item with ID '{item.get('id')}' already exists")
@@ -39,7 +40,7 @@ class CosmosRepository(IBaseRepository):
         """Get item by ID"""
         try:
             logger.info(f"Fetching item: {item_id} for user: {user_id}")
-            item = self.container.read_item(item=item_id, partition_key=user_id)
+            item = await self.container.read_item(item=item_id, partition_key=user_id)
             return item
         except exceptions.CosmosResourceNotFoundError:
             return None
@@ -52,12 +53,12 @@ class CosmosRepository(IBaseRepository):
         try:
             logger.info(f"Fetching all items for user: {user_id}")
             query = "SELECT * FROM c WHERE c.user_id = @user_id"
-            items = list(
-                self.container.query_items(
-                    query=query,
-                    parameters=[{"name": "@user_id", "value": user_id}],
-                )
-            )
+            items = []
+            async for item in self.container.query_items(
+                query=query,
+                parameters=[{"name": "@user_id", "value": user_id}],
+            ):
+                items.append(item)
             return items
         except Exception as e:
             logger.error(f"Error fetching items: {str(e)}")
@@ -67,7 +68,7 @@ class CosmosRepository(IBaseRepository):
         """Update an item"""
         try:
             logger.info(f"Updating item: {item.get('id')}")
-            updated_item = self.container.upsert_item(item)
+            updated_item = await self.container.upsert_item(item)
             return updated_item
         except Exception as e:
             logger.error(f"Error updating item: {str(e)}")
@@ -77,7 +78,7 @@ class CosmosRepository(IBaseRepository):
         """Delete an item"""
         try:
             logger.info(f"Deleting item: {item_id} for user: {user_id}")
-            self.container.delete_item(item=item_id, partition_key=user_id)
+            await self.container.delete_item(item=item_id, partition_key=user_id)
             return True
         except exceptions.CosmosResourceNotFoundError:
             raise EntityNotFoundError("Item", item_id)
@@ -103,7 +104,9 @@ class CosmosRepository(IBaseRepository):
                 if "WHERE" in query and "user_id" not in query:
                     query = query.replace("WHERE", "WHERE c.user_id = @user_id AND")
 
-            items = list(self.container.query_items(query=query, parameters=parameters))
+            items = []
+            async for item in self.container.query_items(query=query, parameters=parameters):
+                items.append(item)
             return items
         except Exception as e:
             logger.error(f"Error executing query: {str(e)}")
