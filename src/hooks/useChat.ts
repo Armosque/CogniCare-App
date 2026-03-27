@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { AgentMessage } from '@/lib/ai-agent';
-import { parseAgentResponse } from '@/lib/agent-utils';
 import { 
   persistMessage, 
   fetchUserHistory, 
@@ -85,7 +84,7 @@ export function useChat() {
     const cleanText = text.replace(/[*_#\[\]]/g, '');
     const maxChunkLength = 200;
     const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
-    let chunks: string[] = [];
+    const chunks: string[] = [];
     sentences.forEach(s => {
       if (s.length > maxChunkLength) {
         const subchunks = s.match(new RegExp(`.{1,${maxChunkLength}}(\\s+|$)`, 'g')) || [s];
@@ -159,7 +158,7 @@ export function useChat() {
     if (state.selectedImage) {
       try {
         const ocrText = await extractTextFromImage(state.selectedImage);
-        docText = ocrText;
+        docText = docText ? `${docText}\n\nTexto extraido de la imagen:\n${ocrText}` : ocrText;
       } catch (e) {
         console.error("Error en OCR:", e);
       }

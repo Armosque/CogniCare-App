@@ -1,4 +1,4 @@
-import { TaskListSchema, CogniCareResponseSchema } from "./schemas";
+import { TaskListSchema, CogniCareResponseSchema, StepItem } from "./schemas";
 
 export function buildReadingLevelInstructions(level: string): string {
   const map: Record<string, string> = {
@@ -103,11 +103,12 @@ export function parseAgentResponse(rawContent: string) {
   } catch {}
 
   // Multi-step resilient extraction
-  let { jsonPart, cleaned } = extractJsonFromResilient(rawContent);
-  let { explanation, cleaned: afterExpl } = extractExplanationResilient(cleaned);
+  const { jsonPart: extractedJsonPart, cleaned } = extractJsonFromResilient(rawContent);
+  let jsonPart = extractedJsonPart;
+  const { explanation, cleaned: afterExpl } = extractExplanationResilient(cleaned);
 
   // Extract PASOS section and convert numbered steps to task cards
-  let steps: any[] = [];
+  let steps: StepItem[] = [];
   let type: "text" | "task-list" = "text";
   let finalContent = afterExpl;
 

@@ -63,7 +63,7 @@ export function SettingsPanel() {
                   ].map((level) => (
                     <button
                       key={level.id}
-                      onClick={() => updatePreference('readingLevel', level.id as any)}
+                      onClick={() => updatePreference('readingLevel', level.id as AppPreferences['readingLevel'])}
                       className={cn(
                         "p-5 rounded-2xl text-left border-2 transition-all font-medium flex flex-col gap-2 relative overflow-hidden",
                         preferences.highContrast 
@@ -95,7 +95,7 @@ export function SettingsPanel() {
                   ].map((toneOpt) => (
                     <button
                       key={toneOpt.id}
-                      onClick={() => updatePreference('tone', toneOpt.id as any)}
+                      onClick={() => updatePreference('tone', toneOpt.id as AppPreferences['tone'])}
                       className={cn(
                         "p-5 rounded-2xl text-left border-2 transition-all font-medium flex flex-col gap-2 relative overflow-hidden",
                         preferences.highContrast 

@@ -1,1 +1,0 @@
-﻿src/app/api/chat/route.ts(105,20): error TS7031: Binding element 'text' implicitly has an 'any' type.
