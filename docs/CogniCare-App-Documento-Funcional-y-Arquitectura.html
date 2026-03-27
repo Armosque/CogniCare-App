@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CogniCare-App-Documento-Funcional-y-Arquitectura.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="cognicare-app">CogniCare-App</h1>
+<h2 id="documento-funcional-t%C3%A9cnico-y-de-arquitectura">Documento Funcional, Técnico y de Arquitectura</h2>
+<p><strong>Versión:</strong> 1.0<br>
+<strong>Fecha:</strong> 27 de marzo de 2026<br>
+<strong>Proyecto:</strong> CogniCare-App<br>
+<strong>Base de análisis:</strong> Implementación actual del repositorio</p>
+<h2 id="1-resumen-ejecutivo">1. Resumen Ejecutivo</h2>
+<p>CogniCare-App es una aplicación web de asistencia cognitiva diseñada para acompañar a personas neurodiversas en tareas de comprensión, organización y ejecución. El sistema combina una interfaz conversacional accesible con servicios de inteligencia artificial para simplificar información, analizar documentos e imágenes, generar tareas accionables y ofrecer apoyo multimodal mediante lectura en voz alta, recordatorios por correo, temporizador de foco e Immersive Reader.</p>
+<p>El producto está orientado a reducir la sobrecarga cognitiva y mejorar la autonomía del usuario en contextos laborales, educativos y de productividad personal.</p>
+<h2 id="2-misi%C3%B3n">2. Misión</h2>
+<p>Facilitar la comprensión y organización de información compleja mediante una experiencia conversacional accesible, calmada y adaptativa para personas neurodiversas.</p>
+<h2 id="3-visi%C3%B3n">3. Visión</h2>
+<p>Convertirse en una plataforma de apoyo cognitivo confiable, transparente y multimodal, capaz de transformar contenido complejo en acciones claras, comprensibles y sostenibles para el usuario.</p>
+<h2 id="4-objetivos-del-sistema">4. Objetivos del Sistema</h2>
+<ul>
+<li>Simplificar contenido textual, documental y visual.</li>
+<li>Adaptar la comunicación al nivel de lectura y tono preferidos del usuario.</li>
+<li>Transformar respuestas en pasos concretos y ejecutables.</li>
+<li>Favorecer comprensión, enfoque y autonomía.</li>
+<li>Aportar transparencia explicando por qué el sistema respondió de determinada manera.</li>
+<li>Ofrecer continuidad mediante historial, preferencias y recordatorios.</li>
+</ul>
+<h2 id="5-alcance">5. Alcance</h2>
+<h3 id="51-alcance-incluido">5.1 Alcance incluido</h3>
+<ul>
+<li>Chat conversacional con agente asistivo.</li>
+<li>Carga de imágenes y documentos.</li>
+<li>Extracción de texto desde PDF, Word, texto plano e imágenes.</li>
+<li>Síntesis, explicación y generación de tareas.</li>
+<li>Renderización de tareas como tarjetas independientes.</li>
+<li>Explicación de transparencia mediante popup dedicado.</li>
+<li>Lectura por voz de mensajes y explicaciones.</li>
+<li>Temporizador Pomodoro o pausa activa.</li>
+<li>Historial de conversaciones.</li>
+<li>Persistencia de mensajes y preferencias por usuario.</li>
+<li>Autenticación con Azure AD vía NextAuth.</li>
+<li>Soporte para Azure Immersive Reader.</li>
+<li>Recordatorios por email.</li>
+</ul>
+<h3 id="52-futuras-funcionalidades">5.2 Futuras funcionalidades</h3>
+<ul>
+<li>Gestión multirol o administración avanzada.</li>
+<li>Analítica avanzada de uso.</li>
+<li>edición colaborativa en tiempo real.</li>
+<li>Flujos offline.</li>
+<li>Panel de administración.</li>
+<li>Métricas clínicas o diagnósticas.</li>
+</ul>
+<h2 id="6-perfil-de-usuarios">6. Perfil de Usuarios</h2>
+<h3 id="61-usuario-final">6.1 Usuario final</h3>
+<p>Persona que necesita apoyo para comprender información, planificar tareas o reducir carga cognitiva.</p>
+<h3 id="62-usuario-autenticado">6.2 Usuario autenticado</h3>
+<p>Usuario con inicio de sesión habilitado para persistencia de historial, preferencias y recordatorios.</p>
+<h3 id="63-operador-t%C3%A9cnico">6.3 Operador técnico</h3>
+<p>Perfil encargado de configurar variables de entorno, servicios Azure y despliegue.</p>
+<h2 id="7-propuesta-de-valor">7. Propuesta de Valor</h2>
+<ul>
+<li>Reduce complejidad sin perder propósito.</li>
+<li>Convierte contenido en acciones concretas.</li>
+<li>Respeta preferencias cognitivas y sensoriales.</li>
+<li>Agrega mecanismos de responsabilidad y transparencia.</li>
+<li>Integra IA con funciones de accesibilidad y productividad real.</li>
+</ul>
+<h2 id="8-stack-tecnol%C3%B3gico">8. Stack Tecnológico</h2>
+<table>
+<thead>
+<tr>
+<th>Capa</th>
+<th>Tecnología</th>
+<th>Uso</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frontend</td>
+<td>Next.js 16 App Router</td>
+<td>Aplicación web principal</td>
+</tr>
+<tr>
+<td>UI</td>
+<td>React 19</td>
+<td>Componentes y flujo cliente</td>
+</tr>
+<tr>
+<td>Estado</td>
+<td>Zustand</td>
+<td>Estado global de UI y chat</td>
+</tr>
+<tr>
+<td>Estilos</td>
+<td>Tailwind CSS 4</td>
+<td>Diseño visual y responsive</td>
+</tr>
+<tr>
+<td>Animaciones</td>
+<td>Framer Motion</td>
+<td>Transiciones y microinteracciones</td>
+</tr>
+<tr>
+<td>Autenticación</td>
+<td>NextAuth + Azure AD</td>
+<td>Inicio de sesión</td>
+</tr>
+<tr>
+<td>Backend BFF</td>
+<td>Server Actions + Route Handlers</td>
+<td>Lógica de integración</td>
+</tr>
+<tr>
+<td>IA generativa</td>
+<td>Azure AI / modelo multimodal</td>
+<td>Respuesta asistida</td>
+</tr>
+<tr>
+<td>OCR imagen</td>
+<td>Azure AI Vision</td>
+<td>Lectura de texto en imágenes</td>
+</tr>
+<tr>
+<td>Análisis documental</td>
+<td>Azure Document Intelligence</td>
+<td>Extracción de contenido complejo</td>
+</tr>
+<tr>
+<td>Persistencia</td>
+<td>Azure Cosmos DB</td>
+<td>Historial y preferencias</td>
+</tr>
+<tr>
+<td>Email</td>
+<td>Azure Communication Services</td>
+<td>Recordatorios</td>
+</tr>
+<tr>
+<td>Accesibilidad</td>
+<td>Azure Immersive Reader</td>
+<td>Lectura inmersiva</td>
+</tr>
+<tr>
+<td>Parsing documentos</td>
+<td><code>pdf-parse</code>, <code>mammoth</code></td>
+<td>PDF y Word</td>
+</tr>
+<tr>
+<td>Testing</td>
+<td>Jest + Testing Library</td>
+<td>Validación automatizada</td>
+</tr>
+</tbody>
+</table>
+<h2 id="9-requisitos-funcionales">9. Requisitos Funcionales</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requisito</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RF-01</td>
+<td>El sistema debe permitir enviar consultas por texto.</td>
+</tr>
+<tr>
+<td>RF-02</td>
+<td>El sistema debe permitir adjuntar imágenes.</td>
+</tr>
+<tr>
+<td>RF-03</td>
+<td>El sistema debe permitir adjuntar documentos PDF, Word y texto.</td>
+</tr>
+<tr>
+<td>RF-04</td>
+<td>El sistema debe extraer texto desde imágenes mediante OCR.</td>
+</tr>
+<tr>
+<td>RF-05</td>
+<td>El sistema debe analizar documentos complejos mediante Azure Document Intelligence.</td>
+</tr>
+<tr>
+<td>RF-06</td>
+<td>El sistema debe generar una síntesis del contenido recibido.</td>
+</tr>
+<tr>
+<td>RF-07</td>
+<td>El sistema debe generar una explicación sencilla y adaptada al nivel de lectura configurado.</td>
+</tr>
+<tr>
+<td>RF-08</td>
+<td>El sistema debe generar tareas para reforzar comprensión y aplicación.</td>
+</tr>
+<tr>
+<td>RF-09</td>
+<td>El sistema debe renderizar cada tarea como card independiente.</td>
+</tr>
+<tr>
+<td>RF-10</td>
+<td>El sistema debe estimar una duración por tarea.</td>
+</tr>
+<tr>
+<td>RF-11</td>
+<td>El sistema debe ofrecer lectura en voz alta de respuestas y explicaciones.</td>
+</tr>
+<tr>
+<td>RF-12</td>
+<td>El sistema debe permitir abrir una explicación de transparencia sobre la respuesta generada.</td>
+</tr>
+<tr>
+<td>RF-13</td>
+<td>El sistema debe almacenar historial de conversaciones por usuario autenticado.</td>
+</tr>
+<tr>
+<td>RF-14</td>
+<td>El sistema debe almacenar preferencias de lectura, tono, contraste y apoyo por voz.</td>
+</tr>
+<tr>
+<td>RF-15</td>
+<td>El sistema debe permitir consultar historial previo.</td>
+</tr>
+<tr>
+<td>RF-16</td>
+<td>El sistema debe permitir activar un modo de pausa activa o Pomodoro.</td>
+</tr>
+<tr>
+<td>RF-17</td>
+<td>El sistema debe permitir enviar recordatorios por correo para tareas.</td>
+</tr>
+<tr>
+<td>RF-18</td>
+<td>El sistema debe permitir autenticación con Azure AD cuando esté configurada.</td>
+</tr>
+<tr>
+<td>RF-19</td>
+<td>El sistema debe permitir usar Azure Immersive Reader cuando esté configurado.</td>
+</tr>
+<tr>
+<td>RF-20</td>
+<td>El sistema debe registrar eventos y errores relevantes para diagnóstico.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="10-requisitos-no-funcionales">10. Requisitos No Funcionales</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requisito</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RNF-01</td>
+<td>La interfaz debe ser responsive para escritorio y móvil.</td>
+</tr>
+<tr>
+<td>RNF-02</td>
+<td>El sistema debe priorizar lenguaje claro y accesible.</td>
+</tr>
+<tr>
+<td>RNF-03</td>
+<td>El sistema debe permitir alto contraste.</td>
+</tr>
+<tr>
+<td>RNF-04</td>
+<td>El sistema debe permitir apoyo por voz.</td>
+</tr>
+<tr>
+<td>RNF-05</td>
+<td>La arquitectura debe separar UI, lógica de agente e integraciones externas.</td>
+</tr>
+<tr>
+<td>RNF-06</td>
+<td>El sistema debe registrar errores y eventos con logging estructurado.</td>
+</tr>
+<tr>
+<td>RNF-07</td>
+<td>La persistencia debe aislar mensajes y preferencias por usuario.</td>
+</tr>
+<tr>
+<td>RNF-08</td>
+<td>Las integraciones externas deben estar gobernadas por variables de entorno.</td>
+</tr>
+<tr>
+<td>RNF-09</td>
+<td>El sistema debe degradar de forma controlada si una integración externa falla.</td>
+</tr>
+<tr>
+<td>RNF-10</td>
+<td>El sistema debe poder diagnosticarse mediante pipeline de trazas y script dedicado.</td>
+</tr>
+<tr>
+<td>RNF-11</td>
+<td>El sistema debe ser extensible para agregar nuevos canales de accesibilidad o modelos.</td>
+</tr>
+<tr>
+<td>RNF-12</td>
+<td>El sistema debe mantener coherencia visual y feedback claro durante procesamiento.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="11-casos-de-uso-principales">11. Casos de Uso Principales</h2>
+<h3 id="cu-01-consultar-al-agente">CU-01 Consultar al agente</h3>
+<p><strong>Actor:</strong> Usuario<br>
+<strong>Resultado esperado:</strong> Recibe una respuesta clara del asistente.</p>
+<h3 id="cu-02-analizar-un-documento">CU-02 Analizar un documento</h3>
+<p><strong>Actor:</strong> Usuario<br>
+<strong>Resultado esperado:</strong> El sistema extrae el contenido, genera síntesis, explicación y tareas.</p>
+<h3 id="cu-03-analizar-una-imagen">CU-03 Analizar una imagen</h3>
+<p><strong>Actor:</strong> Usuario<br>
+<strong>Resultado esperado:</strong> El sistema aplica OCR, interpreta el contenido y genera respuesta accionable.</p>
+<h3 id="cu-04-personalizar-experiencia">CU-04 Personalizar experiencia</h3>
+<p><strong>Actor:</strong> Usuario<br>
+<strong>Resultado esperado:</strong> Cambia nivel de lectura, tono, contraste y apoyo por voz.</p>
+<h3 id="cu-05-escuchar-respuesta">CU-05 Escuchar respuesta</h3>
+<p><strong>Actor:</strong> Usuario<br>
+<strong>Resultado esperado:</strong> El sistema lee en voz alta la respuesta o la explicación de transparencia.</p>
+<h3 id="cu-06-revisar-historial">CU-06 Revisar historial</h3>
+<p><strong>Actor:</strong> Usuario autenticado<br>
+<strong>Resultado esperado:</strong> Accede a conversaciones previas.</p>
+<h3 id="cu-07-recibir-recordatorio">CU-07 Recibir recordatorio</h3>
+<p><strong>Actor:</strong> Usuario autenticado<br>
+<strong>Resultado esperado:</strong> Recibe por email un recordatorio asociado a una tarea.</p>
+<h3 id="cu-08-comprender-por-qu%C3%A9-el-sistema-respondi%C3%B3-as%C3%AD">CU-08 Comprender por qué el sistema respondió así</h3>
+<p><strong>Actor:</strong> Usuario<br>
+<strong>Resultado esperado:</strong> Visualiza una explicación breve, transparente y audible sobre criterios, límites y justificación de la respuesta.</p>
+<h2 id="12-historias-de-usuario">12. Historias de Usuario</h2>
+<ul>
+<li>Como usuario neurodiverso, quiero recibir explicaciones más simples para entender información sin saturarme.</li>
+<li>Como usuario, quiero subir un documento y obtener pasos concretos para saber qué hacer después de leerlo.</li>
+<li>Como usuario, quiero cambiar el tono del asistente para sentirme más cómodo durante la interacción.</li>
+<li>Como usuario, quiero escuchar la respuesta en voz alta para reducir fatiga visual o cognitiva.</li>
+<li>Como usuario, quiero revisar el historial de conversaciones para retomar tareas anteriores.</li>
+<li>Como usuario, quiero saber por qué el sistema llegó a una respuesta para confiar más en el resultado.</li>
+<li>Como usuario autenticado, quiero guardar mis preferencias para no configurarlas cada vez.</li>
+<li>Como usuario, quiero usar un temporizador de foco para mantener el ritmo de trabajo.</li>
+</ul>
+<h2 id="13-arquitectura-general">13. Arquitectura General</h2>
+<p>La solución sigue un modelo de aplicación web full-stack en Next.js con componentes cliente, server actions y rutas API. La UI gestiona interacción y accesibilidad; la lógica de agente organiza prompts y parseo; y los servicios Azure resuelven IA, OCR, análisis documental, autenticación, persistencia y correo.</p>
+<h3 id="131-diagrama-de-contexto">13.1 Diagrama de Contexto</h3>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart LR
+    U["Usuario"] --> W["CogniCare-App"]
+    W --> AA["Azure AI Model"]
+    W --> DI["Azure Document Intelligence"]
+    W --> VI["Azure AI Vision OCR"]
+    W --> COS["Azure Cosmos DB"]
+    W --> ACS["Azure Communication Services"]
+    W --> AAD["Azure AD / NextAuth"]
+    W --> IR["Azure Immersive Reader"]
+</div></code></pre>
+<h3 id="132-diagrama-de-contenedores">13.2 Diagrama de Contenedores</h3>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart TB
+    subgraph Client["Cliente Web"]
+        UI["React UI + Zustand"]
+        TTS["Speech Synthesis"]
+    end
+
+    subgraph App["Next.js App"]
+        PAGE["App Router Pages"]
+        ACT["Server Actions"]
+        API["API Routes"]
+        AGENT["AI Agent Layer"]
+        DOC["Document Analysis Layer"]
+        PERSIST["Persistence Layer"]
+    end
+
+    subgraph Azure["Servicios Azure"]
+        MODEL["Azure AI"]
+        OCR["Azure Vision"]
+        DOCINT["Document Intelligence"]
+        DB["Cosmos DB"]
+        MAIL["Communication Services"]
+        AUTH["Azure AD"]
+        READER["Immersive Reader"]
+    end
+
+    UI --> PAGE
+    UI --> ACT
+    UI --> API
+    TTS --> UI
+    PAGE --> ACT
+    ACT --> AGENT
+    ACT --> PERSIST
+    ACT --> DOC
+    API --> AGENT
+    AGENT --> MODEL
+    DOC --> OCR
+    DOC --> DOCINT
+    PERSIST --> DB
+    PAGE --> AUTH
+    UI --> READER
+    ACT --> MAIL
+</div></code></pre>
+<h3 id="133-diagrama-de-componentes-l%C3%B3gicos">13.3 Diagrama de Componentes Lógicos</h3>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart LR
+    ChatInput --> useChat
+    useChat --> actions["actions.ts"]
+    actions --> aiagent["ai-agent.ts"]
+    actions --> docan["document-analysis.ts"]
+    actions --> cosmos["cosmos.ts"]
+    aiagent --> parser["agent-response.ts"]
+    aiagent --> azure["Azure AI"]
+    docan --> vision["Azure Vision"]
+    docan --> docintel["Document Intelligence"]
+    MessageItem --> TaskCard
+    MessageItem --> ExplanationPopup["Popup de transparencia"]
+    MessageItem --> ImmersiveReaderButton
+    SettingsPanel --> useAppStore
+    Header --> useAppStore
+</div></code></pre>
+<h2 id="14-flujo-funcional-de-documento-o-imagen">14. Flujo Funcional de Documento o Imagen</h2>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    participant U as Usuario
+    participant UI as Chat UI
+    participant UC as useChat
+    participant SA as Server Action
+    participant DA as Document Analysis
+    participant AG as AI Agent
+    participant AZ as Azure AI
+
+    U->>UI: Adjunta documento o imagen y envía consulta
+    UI->>UC: handleSend()
+    alt Documento
+        UC->>SA: extractTextFromFile / analyzeComplexDocument
+        SA->>DA: parseo local o Document Intelligence
+        DA-->>SA: texto extraído
+    else Imagen
+        UC->>DA: extractTextFromImage
+        DA-->>UC: OCR + caption
+    end
+    UC->>SA: callAgentAction(history, preferencias)
+    SA->>AG: processWithAgent()
+    AG->>AZ: prompt + contexto + material
+    AZ-->>AG: respuesta cruda
+    AG->>AG: parseAgentResponse()
+    AG-->>SA: síntesis + explicación + tareas + transparencia
+    SA-->>UC: AgentMessage
+    UC-->>UI: render de mensaje y cards
+</div></code></pre>
+<h2 id="15-persistencia-y-modelo-de-datos">15. Persistencia y Modelo de Datos</h2>
+<h3 id="151-entidades-principales">15.1 Entidades principales</h3>
+<ul>
+<li>
+<p><strong>Message</strong></p>
+<ul>
+<li><code>id</code></li>
+<li><code>userId</code></li>
+<li><code>role</code></li>
+<li><code>content</code></li>
+<li><code>type</code></li>
+<li><code>documentText</code></li>
+<li><code>image</code></li>
+<li><code>steps</code></li>
+<li><code>explanation</code></li>
+<li><code>timestamp</code></li>
+</ul>
+</li>
+<li>
+<p><strong>User Preferences</strong></p>
+<ul>
+<li><code>id</code></li>
+<li><code>userId</code></li>
+<li><code>readingLevel</code></li>
+<li><code>tone</code></li>
+<li><code>highContrast</code></li>
+<li><code>textToSpeech</code></li>
+<li><code>updatedAt</code></li>
+</ul>
+</li>
+</ul>
+<h3 id="152-diagrama-de-datos">15.2 Diagrama de Datos</h3>
+<pre><code class="language-mermaid"><div class="mermaid">classDiagram
+    class Message {
+      string id
+      string userId
+      string role
+      string content
+      string type
+      string documentText
+      string image
+      string explanation
+      string timestamp
+    }
+
+    class Step {
+      string title
+      string duration
+      string[] bullets
+    }
+
+    class UserPreferences {
+      string id
+      string userId
+      string readingLevel
+      string tone
+      boolean highContrast
+      boolean textToSpeech
+      string updatedAt
+    }
+
+    Message --> Step
+</div></code></pre>
+<h2 id="16-arquitectura-de-seguridad">16. Arquitectura de Seguridad</h2>
+<ul>
+<li>Autenticación delegada a Azure AD mediante NextAuth.</li>
+<li>Asociación de historial y preferencias por <code>userId</code>.</li>
+<li>Secretos gobernados por variables de entorno centralizadas.</li>
+<li>Integraciones externas aisladas en capa de servidor.</li>
+<li>Fallbacks controlados cuando no hay configuración de servicios.</li>
+<li>Evitación de exposición directa de claves en cliente.</li>
+</ul>
+<h2 id="17-accesibilidad-y-dise%C3%B1o-inclusivo">17. Accesibilidad y Diseño Inclusivo</h2>
+<ul>
+<li>Adaptación del lenguaje por nivel de lectura.</li>
+<li>Variación de tono comunicacional.</li>
+<li>Modo de alto contraste.</li>
+<li>Lectura por voz.</li>
+<li>Immersive Reader.</li>
+<li>Tareas renderizadas como cards separadas.</li>
+<li>Explicación de transparencia accesible y audible.</li>
+<li>Refuerzo visual con animaciones suaves y feedback de estado.</li>
+</ul>
+<h2 id="18-observabilidad-y-diagn%C3%B3stico">18. Observabilidad y Diagnóstico</h2>
+<p>El proyecto incorpora logging estructurado y un pipeline de diagnóstico del agente para revisar:</p>
+<ul>
+<li>entrada recibida,</li>
+<li>preprocesamiento del documento,</li>
+<li>payload enviado al modelo,</li>
+<li>respuesta cruda del modelo,</li>
+<li>parseo final y problemas detectados.</li>
+</ul>
+<h3 id="181-diagrama-de-diagn%C3%B3stico">18.1 Diagrama de Diagnóstico</h3>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart LR
+    IN["Entrada usuario"] --> PRE["Preprocesamiento"]
+    PRE --> PAY["Payload a Azure"]
+    PAY --> RAW["Respuesta cruda"]
+    RAW --> PAR["Parseo estructurado"]
+    PAR --> OUT["Respuesta final UI"]
+    OUT --> LOG["Logs y diagnóstico"]
+</div></code></pre>
+<h2 id="19-riesgos-t%C3%A9cnicos-actuales">19. Riesgos Técnicos Actuales</h2>
+<ul>
+<li>Calidad variable del OCR o extracción documental.</li>
+<li>Respuestas truncadas o genéricas del modelo multimodal.</li>
+<li>Dependencia de configuraciones externas de Azure.</li>
+<li>Tiempo de respuesta elevado para documentos extensos.</li>
+<li>Codificación heredada con algunos textos mojibake en partes del proyecto.</li>
+<li>Cobertura de pruebas todavía limitada en flujos E2E reales.</li>
+</ul>
+<h2 id="20-plan-de-escalamiento-con-infraestructura-azure">20. Plan de Escalamiento con Infraestructura Azure</h2>
+<p>El plan de escalamiento de CogniCare-App debe responder a una realidad concreta del sistema actual: la aplicación no solo sirve páginas web, sino que también orquesta cargas variables de IA generativa, OCR, análisis documental, persistencia de historial, autenticación y notificaciones. Por eso, el escalamiento no debe pensarse como un único servidor más grande, sino como una arquitectura Azure desacoplada por capacidades.</p>
+<h3 id="201-principios-del-plan-de-escalamiento">20.1 Principios del plan de escalamiento</h3>
+<ul>
+<li>Escalar de forma independiente el frontend, la lógica de aplicación, las integraciones cognitivas y la persistencia.</li>
+<li>Mantener baja latencia para la experiencia conversacional del usuario.</li>
+<li>Proteger la estabilidad del sistema cuando aumentan documentos largos, imágenes o concurrencia.</li>
+<li>Priorizar servicios administrados de Azure para reducir complejidad operativa.</li>
+<li>Diseñar observabilidad desde el inicio para detectar cuellos de botella por etapa.</li>
+</ul>
+<h3 id="202-arquitectura-azure-propuesta-para-escalamiento">20.2 Arquitectura Azure propuesta para escalamiento</h3>
+<table>
+<thead>
+<tr>
+<th>Capa</th>
+<th>Servicio Azure propuesto</th>
+<th>Motivo de uso</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Presentación web</td>
+<td>Azure App Service o Azure Container Apps</td>
+<td>El proyecto es una app Next.js full-stack con server actions y rutas API. Ambos servicios permiten desplegar la app completa sin separar frontend y backend en esta etapa.</td>
+</tr>
+<tr>
+<td>Entrega global</td>
+<td>Azure Front Door</td>
+<td>Mejora latencia, terminación TLS, enrutamiento global y protección de entrada. Es útil porque CogniCare tiene usuarios interactivos sensibles al tiempo de respuesta.</td>
+</tr>
+<tr>
+<td>Ejecución de procesos asíncronos futuros</td>
+<td>Azure Functions o Container Apps Jobs</td>
+<td>Conveniente para desacoplar tareas pesadas como reintentos de análisis, notificaciones diferidas o lotes documentales.</td>
+</tr>
+<tr>
+<td>IA generativa</td>
+<td>Azure AI / Azure OpenAI deployment dedicado</td>
+<td>La app ya depende de un modelo multimodal. Escalar aquí implica separar capacidad del modelo respecto del servidor web.</td>
+</tr>
+<tr>
+<td>OCR y análisis documental</td>
+<td>Azure AI Vision + Azure Document Intelligence</td>
+<td>Ya están integrados. Deben escalar como servicios independientes porque su carga no coincide siempre con la del chat.</td>
+</tr>
+<tr>
+<td>Persistencia</td>
+<td>Azure Cosmos DB</td>
+<td>La estructura actual de mensajes y preferencias encaja bien con un modelo documental particionado por usuario.</td>
+</tr>
+<tr>
+<td>Identidad</td>
+<td>Microsoft Entra ID</td>
+<td>Ya utilizado vía NextAuth con Azure AD. Escala naturalmente como servicio administrado.</td>
+</tr>
+<tr>
+<td>Secretos y configuración</td>
+<td>Azure Key Vault + App Configuration</td>
+<td>Reduce riesgo operativo y evita dependencia excesiva de <code>.env.local</code> en entornos productivos.</td>
+</tr>
+<tr>
+<td>Observabilidad</td>
+<td>Azure Monitor + Application Insights + Log Analytics</td>
+<td>Permite seguir tiempos, errores y trazas del pipeline del agente ya implementado.</td>
+</tr>
+<tr>
+<td>Archivos y adjuntos futuros</td>
+<td>Azure Blob Storage</td>
+<td>Recomendable cuando los adjuntos ya no deban viajar enteramente embebidos en la solicitud.</td>
+</tr>
+<tr>
+<td>Email</td>
+<td>Azure Communication Services</td>
+<td>Ya alineado con el producto y apropiado para recordatorios transaccionales.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="203-por-qu%C3%A9-usar-cada-componente-en-el-escalamiento">20.3 Por qué usar cada componente en el escalamiento</h3>
+<h4 id="azure-app-service-o-azure-container-apps">Azure App Service o Azure Container Apps</h4>
+<p>Se usan porque Cognicare es una aplicación Next.js con SSR, server actions y rutas API. No basta un hosting estático.<br>
+App Service es apropiado si se busca simplicidad operativa y despliegue administrado tradicional.<br>
+Container Apps es mejor si se quiere elasticidad más fina, revisiones, escalado basado en concurrencia y una evolución más natural hacia componentes desacoplados.</p>
+<h4 id="azure-front-door">Azure Front Door</h4>
+<p>Se usa porque la experiencia del usuario depende de respuestas rápidas y estables. Front Door ayuda a reducir latencia percibida, mejora disponibilidad regional y permite proteger la entrada pública del sistema con reglas y caching donde corresponda.</p>
+<h4 id="azure-ai-dedicado-para-el-modelo">Azure AI dedicado para el modelo</h4>
+<p>Se usa separado del cómputo de la app porque el cuello de botella principal del sistema no es solo renderizar UI, sino procesar consultas cognitivas. Esto permite escalar capacidad del modelo sin escalar innecesariamente la aplicación web y viceversa.</p>
+<h4 id="azure-document-intelligence-y-vision">Azure Document Intelligence y Vision</h4>
+<p>Se mantienen como servicios independientes porque el patrón de uso de documentos e imágenes puede crecer de forma distinta al chat normal. Esto evita sobredimensionar el servidor de la app para cargas de OCR o parsing documental.</p>
+<h4 id="azure-cosmos-db">Azure Cosmos DB</h4>
+<p>Se usa porque el modelo actual ya persiste mensajes y preferencias como documentos JSON por usuario. Cosmos es coherente con esta estructura, escala horizontalmente, soporta baja latencia y se alinea con el patrón de partición por <code>userId</code> ya implementado.</p>
+<h4 id="azure-key-vault">Azure Key Vault</h4>
+<p>Se recomienda porque el proyecto depende de muchas credenciales: modelo, OCR, Cosmos, Immersive Reader, email y autenticación. Centralizar secretos reduce riesgo de fuga y simplifica rotación.</p>
+<h4 id="application-insights">Application Insights</h4>
+<p>Se recomienda porque el sistema ya tiene un pipeline de diagnóstico por etapas en el agente. Application Insights permitiría convertir esas trazas en telemetría consultable: tiempo de OCR, tiempo de IA, tamaño del documento, errores por proveedor, tasa de respuestas truncadas y latencia por flujo.</p>
+<h3 id="204-fases-de-escalamiento">20.4 Fases de escalamiento</h3>
+<h4 id="fase-1-producci%C3%B3n-inicial-controlada">Fase 1. Producción inicial controlada</h4>
+<ul>
+<li>Desplegar la app en Azure App Service.</li>
+<li>Mantener Azure AI, Vision, Document Intelligence y Cosmos como servicios administrados.</li>
+<li>Configurar Application Insights y Key Vault.</li>
+<li>Habilitar Front Door solo si se requiere acceso externo de baja latencia.</li>
+</ul>
+<p><strong>Por qué esta fase:</strong> minimiza complejidad y permite salir a producción con una topología estable y comprensible.</p>
+<h4 id="fase-2-escalamiento-por-crecimiento-de-usuarios">Fase 2. Escalamiento por crecimiento de usuarios</h4>
+<ul>
+<li>Migrar o desplegar la app en Azure Container Apps si la concurrencia comienza a ser variable.</li>
+<li>Activar autoescalado de la app por CPU, memoria o concurrencia HTTP.</li>
+<li>Ajustar throughput y particionado de Cosmos DB.</li>
+<li>Separar el procesamiento de adjuntos pesados en procesos asíncronos.</li>
+</ul>
+<p><strong>Por qué esta fase:</strong> el principal riesgo no será solo el tráfico, sino la mezcla entre usuarios concurrentes y cargas cognitivas pesadas.</p>
+<h4 id="fase-3-escalamiento-por-complejidad-de-procesamiento">Fase 3. Escalamiento por complejidad de procesamiento</h4>
+<ul>
+<li>Incorporar colas para análisis documental pesado.</li>
+<li>Subir archivos a Blob Storage y procesarlos por referencia en lugar de enviar grandes blobs embebidos.</li>
+<li>Ejecutar OCR y análisis documental mediante workers o jobs desacoplados.</li>
+<li>Reservar capacidad específica del modelo si la demanda lo justifica.</li>
+</ul>
+<p><strong>Por qué esta fase:</strong> cuando crecen los adjuntos, el problema deja de ser web y pasa a ser de procesamiento distribuido y control de tiempos.</p>
+<h3 id="205-diagrama-de-escalamiento-propuesto">20.5 Diagrama de escalamiento propuesto</h3>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart TB
+    U["Usuario"] --> FD["Azure Front Door"]
+    FD --> APP["Azure App Service / Container Apps"]
+    APP --> KV["Azure Key Vault"]
+    APP --> AI["Azure AI Model Deployment"]
+    APP --> OCR["Azure AI Vision"]
+    APP --> DOC["Azure Document Intelligence"]
+    APP --> COS["Azure Cosmos DB"]
+    APP --> ACS["Azure Communication Services"]
+    APP --> APPINS["Application Insights"]
+    APP --> ENTRA["Microsoft Entra ID"]
+    APP -. futuro .-> BLOB["Azure Blob Storage"]
+    APP -. futuro .-> JOBS["Functions / Container Apps Jobs"]
+</div></code></pre>
+<h3 id="206-estrategia-de-escalamiento-por-componente">20.6 Estrategia de escalamiento por componente</h3>
+<table>
+<thead>
+<tr>
+<th>Componente</th>
+<th>Estrategia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Next.js App</td>
+<td>Escalado horizontal de instancias, priorizando statelessness y variables externas.</td>
+</tr>
+<tr>
+<td>Modelo IA</td>
+<td>Incrementar capacidad del deployment o separar deployments por tipo de uso.</td>
+</tr>
+<tr>
+<td>OCR</td>
+<td>Mantener como servicio externo y medir latencia por imagen.</td>
+</tr>
+<tr>
+<td>Análisis documental</td>
+<td>Desacoplar trabajos pesados y usar colas en futuras fases.</td>
+</tr>
+<tr>
+<td>Cosmos DB</td>
+<td>Particionar por usuario, ajustar RU/s y revisar consultas históricas.</td>
+</tr>
+<tr>
+<td>Email</td>
+<td>Mantener transaccional y desacoplado del flujo crítico cuando sea posible.</td>
+</tr>
+<tr>
+<td>Telemetría</td>
+<td>Centralizar métricas, logs y trazas por operación.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="207-riesgos-de-escalamiento-y-mitigaciones">20.7 Riesgos de escalamiento y mitigaciones</h3>
+<table>
+<thead>
+<tr>
+<th>Riesgo</th>
+<th>Mitigación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Respuestas lentas por documentos extensos</td>
+<td>Compactación de texto, colas, procesamiento asíncrono y límites de tamaño.</td>
+</tr>
+<tr>
+<td>Saturación del modelo IA</td>
+<td>Separar capacidad del deployment y medir concurrencia real.</td>
+</tr>
+<tr>
+<td>Crecimiento del historial</td>
+<td>TTL o políticas de archivado y control de RU/s en Cosmos DB.</td>
+</tr>
+<tr>
+<td>Dependencia de demasiadas credenciales</td>
+<td>Uso de Key Vault y Managed Identity cuando aplique.</td>
+</tr>
+<tr>
+<td>Dificultad para diagnosticar errores</td>
+<td>Application Insights, trazas por etapa y dashboard operativo.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="208-kpis-recomendados-para-decidir-escalar">20.8 KPIs recomendados para decidir escalar</h3>
+<ul>
+<li>Tiempo promedio de respuesta del chat.</li>
+<li>Tiempo promedio de procesamiento de documentos.</li>
+<li>Tasa de error por proveedor Azure.</li>
+<li>Porcentaje de respuestas truncadas o con fallback.</li>
+<li>Consumo de RU/s en Cosmos DB.</li>
+<li>Latencia percibida por región.</li>
+<li>Concurrencia simultánea de usuarios activos.</li>
+</ul>
+<h2 id="21-estrategia-de-calidad">21. Estrategia de Calidad</h2>
+<ul>
+<li>Linting con ESLint.</li>
+<li>Testing con Jest.</li>
+<li>Build de verificación con Next.js.</li>
+<li>Diagnóstico manual del agente con script dedicado.</li>
+<li>Logging por etapas para investigar errores reales de documentos o imágenes.</li>
+</ul>
+<h2 id="22-recomendaciones-de-evoluci%C3%B3n">22. Recomendaciones de Evolución</h2>
+<ul>
+<li>Incorporar pruebas E2E automatizadas sobre <code>/api/chat</code>.</li>
+<li>Formalizar una capa de DTOs o esquemas para mensajes del agente.</li>
+<li>Mejorar saneamiento de OCR y normalización de texto.</li>
+<li>Versionar prompts y políticas de transparencia.</li>
+<li>Añadir analítica de calidad de respuesta y tiempos de procesamiento.</li>
+<li>Separar aún más la capa de dominio del agente respecto de la capa UI.</li>
+</ul>
+<h2 id="23-conclusi%C3%B3n">23. Conclusión</h2>
+<p>CogniCare-App es una solución sólida de asistencia cognitiva con una propuesta de valor clara y una arquitectura moderna basada en Next.js y servicios Azure. El sistema ya ofrece capacidades relevantes de comprensión, accesibilidad y productividad. Su principal fortaleza está en la combinación de IA aplicada, diseño inclusivo y mecanismos de transparencia. La evolución natural del producto pasa por fortalecer observabilidad, calidad de respuestas con adjuntos y validación E2E.</p>
+
+</body>
+</html>
