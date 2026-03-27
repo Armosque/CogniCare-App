@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Brain, X } from 'lucide-react';
+import { Brain, Volume2, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
@@ -17,15 +17,16 @@ import { PomodoroTimer } from '@/components/features/PomodoroTimer';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 
 export default function CogniCareApp() {
-  // Initialize effects for Cosmos DB sync and timers
   usePreferences();
   usePomodoro();
-  useChat();
+
+  const { playAudio } = useChat();
 
   const preferences = useAppStore(state => state.preferences);
   const explanationOpen = useAppStore(state => state.explanationOpen);
   const setExplanationOpen = useAppStore(state => state.setExplanationOpen);
   const activeExplanation = useAppStore(state => state.activeExplanation);
+  const speakingId = useAppStore(state => state.speakingId);
 
   return (
     <main className={cn(
@@ -60,15 +61,15 @@ export default function CogniCareApp() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               className={cn(
-                "w-full max-w-lg p-8 rounded-[2.5rem] border-2 calm-shadow",
-                preferences.highContrast 
-                  ? "bg-zinc-950 border-slate-800 text-zinc-200" 
+                "w-full max-w-4xl p-8 md:p-10 rounded-[2.5rem] border-2 calm-shadow",
+                preferences.highContrast
+                  ? "bg-zinc-950 border-slate-800 text-zinc-200"
                   : "bg-white border-blue-100"
               )}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
+              <div className="flex justify-between items-center mb-6 gap-4">
+                <div className="flex items-center gap-3 min-w-0">
                   <div className={cn(
                     "p-3 rounded-2xl",
                     preferences.highContrast ? "bg-slate-900/90" : "bg-blue-50"
@@ -77,16 +78,33 @@ export default function CogniCareApp() {
                   </div>
                   <h3 className="text-xl font-black">Por qué esta respuesta</h3>
                 </div>
-                <button
-                  onClick={() => setExplanationOpen(false)}
-                  className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  <X className="w-6 h-6 opacity-60" />
-                </button>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => playAudio(activeExplanation || "", -999)}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all text-sm font-bold",
+                      preferences.highContrast
+                        ? (speakingId === -999 ? "bg-red-900 border-white text-white" : "bg-zinc-950 border-slate-800 text-zinc-200")
+                        : (speakingId === -999 ? "bg-red-50 border-red-200 text-red-600" : "bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-100")
+                    )}
+                    title="Escuchar explicación"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                    <span>{speakingId === -999 ? 'Parar' : 'Escuchar'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setExplanationOpen(false)}
+                    className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                  >
+                    <X className="w-6 h-6 opacity-60" />
+                  </button>
+                </div>
               </div>
 
               <div className={cn(
-                "text-lg leading-relaxed space-y-4",
+                "text-base md:text-lg leading-relaxed space-y-4",
                 preferences.highContrast ? "text-zinc-200" : "text-gray-700"
               )}>
                 <ReactMarkdown>
@@ -98,8 +116,8 @@ export default function CogniCareApp() {
                 onClick={() => setExplanationOpen(false)}
                 className={cn(
                   "w-full mt-8 py-4 rounded-2xl font-black transition-all interactive-element calm-shadow",
-                  preferences.highContrast 
-                    ? "bg-slate-900 text-zinc-200" 
+                  preferences.highContrast
+                    ? "bg-slate-900 text-zinc-200"
                     : "bg-primary text-white"
                 )}
               >

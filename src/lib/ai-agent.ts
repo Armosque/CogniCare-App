@@ -365,56 +365,44 @@ function buildTransparencyExplanation(
   readingLevel: string,
   tone: string
 ): string {
-  const evidence: string[] = [];
-  const limits: string[] = [];
   const criteria: string[] = [];
+  const reasoning: string[] = [];
+  const limits: string[] = [];
   const synthesis = parsed.synthesis?.trim() || "";
-  const explanation = parsed.explanation?.trim() || "";
   const steps = parsed.steps || [];
 
   if (latestUserMessage?.documentText) {
     criteria.push("Tomé como base el texto extraído del documento adjunto, no conocimiento externo.");
-    evidence.push(`Prioricé las ideas que aparecían con más peso en el documento, por ejemplo: "${latestUserMessage.documentText.slice(0, 140).trim()}..."`);
+    reasoning.push("Prioricé las ideas más repetidas e importantes del documento para construir la síntesis y la explicación.");
     limits.push("Si el texto extraído del documento tenía cortes, ruido u OCR imperfecto, eso puede afectar la precisión.");
   } else if (latestUserMessage?.image) {
     criteria.push("Tomé como base la imagen adjunta y la descripción que el modelo pudo inferir de ella.");
+    reasoning.push("Me apoyé en los elementos visibles de la imagen para resumir y explicar el contenido.");
     limits.push("Si la imagen era borrosa, parcial o con poco contraste, la interpretación puede perder detalle.");
   } else {
     criteria.push("Tomé como base la pregunta del usuario y respondí sin añadir pasos de documento o imagen.");
+    reasoning.push("Elegí una respuesta directa porque no había material adjunto que requiriera síntesis y tareas.");
   }
 
   criteria.push(`Ajusté el lenguaje al nivel "${readingLevel}" y al tono "${tone}".`);
 
   if (synthesis) {
-    evidence.push(`La síntesis se eligió para condensar la idea principal en una frase breve: "${synthesis.slice(0, 180)}"`);
-  }
-
-  if (explanation) {
-    evidence.push(`La explicación se simplificó para que el contenido fuera más fácil de seguir: "${explanation.slice(0, 180)}"`);
+    reasoning.push("La síntesis se eligió para dejar clara la idea principal sin copiar todo el material.");
   }
 
   if (steps.length > 0) {
-    evidence.push(`Las tareas se generaron a partir de los conceptos más importantes detectados en la respuesta: ${steps.map((step) => step.title).slice(0, 3).join("; ")}.`);
+    reasoning.push("Las tareas se generaron a partir de los conceptos clave para reforzar comprensión, reformulación y aplicación.");
     criteria.push("Elegí tareas de repaso porque ayudan a comprobar comprensión, reformulación y aplicación.");
   }
 
   limits.push("No puedo garantizar intención exacta del autor; solo trabajo con el contenido recibido.");
   limits.push("Si el documento es muy largo, primero se compacta para acelerar el análisis.");
 
-  const sections = [
-    "### Como llegue a esta respuesta",
-    "",
-    "#### Criterios usados",
-    ...criteria.map((item) => `- ${item}`),
-    "",
-    "#### Por que no elegi otra respuesta",
-    ...evidence.map((item) => `- ${item}`),
-    "",
-    "#### Limites y precauciones",
-    ...limits.map((item) => `- ${item}`),
-  ];
+  const paragraphOne = `Tomé esta respuesta a partir del material que recibí y ajusté el lenguaje al nivel "${readingLevel}" con un tono "${tone}". ${criteria.slice(0, 2).join(" ")}`;
+  const paragraphTwo = `Elegí esta forma de responder porque buscó resumir la idea principal, explicarla con claridad y convertir los puntos más importantes en tareas útiles. ${reasoning.slice(0, 2).join(" ")}`;
+  const paragraphThree = `Esta explicación tiene límites: ${limits.slice(0, 2).join(" ")}`;
 
-  return sections.join("\n").trim();
+  return [paragraphOne, paragraphTwo, paragraphThree].join("\n\n").trim();
 }
 
 export async function processWithAgent(
